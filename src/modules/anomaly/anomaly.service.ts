@@ -5,9 +5,11 @@ export const NOMINAL_PRESSURE = 40.0;
 export const NORMAL_MAX_DEVIATION = 10.0;
 export const WARNING_MAX_DEVIATION = 30.0;
 export const CRITICAL_CONSECUTIVE_CYCLES = 3;
+export const WATCHDOG_TIMEOUT_MS = 10 * 60 * 1000;
 
 interface DeviceState {
   highStreak: number;
+  lastSeen: Date;
 }
 
 export class AnomalyService {
@@ -40,7 +42,7 @@ export class AnomalyService {
     const previousState = this.devices.get(deviceId);
     const previousStreak = previousState ? previousState.highStreak : 0;
     const streak = deviation > WARNING_MAX_DEVIATION ? previousStreak + 1 : 0;
-    this.devices.set(deviceId, { highStreak: streak });
+    this.devices.set(deviceId, { highStreak: streak, lastSeen: new Date(payload.timestamp) });
 
     const severity = this.classify(deviation, streak);
     const result: AnomalyResult = {
@@ -57,5 +59,17 @@ export class AnomalyService {
     }
 
     return result;
+  }
+
+  /** Devuelve los deviceId que no han reportado en más de 10 minutos respecto a `now`. */
+  checkWatchdog(now: Date): string[] {
+    const silentDevices: string[] = [];
+    for (const [deviceId, state] of this.devices) {
+      const elapsedMs = now.getTime() - state.lastSeen.getTime();
+      if (elapsedMs > WATCHDOG_TIMEOUT_MS) {
+        silentDevices.push(deviceId);
+      }
+    }
+    return silentDevices;
   }
 }
