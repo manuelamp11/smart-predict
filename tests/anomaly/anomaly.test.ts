@@ -1,4 +1,5 @@
 import { AnomalyService } from '../../src/modules/anomaly/anomaly.service';
+import type { Notifier } from '../../src/modules/anomaly/anomaly.model';
 import type { TelemetryPayload } from '../../src/modules/telemetry/telemetry.model';
 
 const makePayload = (deviceId: string, pressure: number, timestamp = '2026-10-15T10:00:00Z'): TelemetryPayload => ({
@@ -7,11 +8,15 @@ const makePayload = (deviceId: string, pressure: number, timestamp = '2026-10-15
   metrics: { temperature: 25, vibration: 10, pressure },
 });
 
+const makeNotifier = (): Notifier => ({ notify: jest.fn() });
+
 describe('AnomalyService', () => {
+  let notifier: Notifier;
   let service: AnomalyService;
 
   beforeEach(() => {
-    service = new AnomalyService();
+    notifier = makeNotifier();
+    service = new AnomalyService(notifier);
   });
 
   describe('clasificación por desviación', () => {
@@ -28,6 +33,60 @@ describe('AnomalyService', () => {
     it('calcula la desviación como porcentaje absoluto respecto al umbral nominal', () => {
       expect(service.analyze(makePayload('dev-1', 44)).deviation).toBeCloseTo(10);
       expect(service.analyze(makePayload('dev-1', 52)).deviation).toBeCloseTo(30);
+    });
+  });
+
+  describe('racha de 3 ciclos para alerta crítica', () => {
+    it('clasifica como CRITICAL_ALERT_L1 al tercer ciclo consecutivo > 30%', () => {
+      service.analyze(makePayload('dev-1', 60));
+      service.analyze(makePayload('dev-1', 60));
+      const third = service.analyze(makePayload('dev-1', 60));
+      expect(third.severity).toBe('CRITICAL_ALERT_L1');
+      expect(third.consecutiveHighReadings).toBe(3);
+    });
+
+    it.each([52.01, 27.99])('%d PSI cuenta para la racha (fuera del rango WARNING)', (pressure) => {
+      service.analyze(makePayload('dev-1', pressure));
+      service.analyze(makePayload('dev-1', pressure));
+      const third = service.analyze(makePayload('dev-1', pressure));
+      expect(third.severity).toBe('CRITICAL_ALERT_L1');
+    });
+
+    it('no llega a CRITICAL si una lectura normal interrumpe la racha', () => {
+      service.analyze(makePayload('dev-1', 60));
+      service.analyze(makePayload('dev-1', 60));
+      service.analyze(makePayload('dev-1', 40));
+      service.analyze(makePayload('dev-1', 60));
+      const fifth = service.analyze(makePayload('dev-1', 60));
+      expect(fifth.severity).not.toBe('CRITICAL_ALERT_L1');
+      expect(fifth.consecutiveHighReadings).toBe(2);
+    });
+
+    it('cada dispositivo lleva su propia racha', () => {
+      service.analyze(makePayload('dev-1', 60));
+      service.analyze(makePayload('dev-1', 60));
+      const devTwoFirst = service.analyze(makePayload('dev-2', 60));
+      expect(devTwoFirst.severity).not.toBe('CRITICAL_ALERT_L1');
+      expect(devTwoFirst.consecutiveHighReadings).toBe(1);
+    });
+  });
+
+  describe('notificación', () => {
+    it('notifica en WARNING_L2', () => {
+      service.analyze(makePayload('dev-1', 52));
+      expect(notifier.notify).toHaveBeenCalledTimes(1);
+    });
+
+    it('notifica en CRITICAL_ALERT_L1', () => {
+      service.analyze(makePayload('dev-1', 60));
+      service.analyze(makePayload('dev-1', 60));
+      service.analyze(makePayload('dev-1', 60));
+      expect(notifier.notify).toHaveBeenCalledTimes(3);
+    });
+
+    it('no notifica en NORMAL', () => {
+      service.analyze(makePayload('dev-1', 40));
+      expect(notifier.notify).not.toHaveBeenCalled();
     });
   });
 });
