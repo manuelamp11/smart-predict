@@ -89,4 +89,28 @@ describe('AnomalyService', () => {
       expect(notifier.notify).not.toHaveBeenCalled();
     });
   });
+
+  describe('watchdog', () => {
+    const lastReading = '2026-10-15T10:00:00Z';
+
+    it('a los 10 minutos exactos no se considera SIN_SEÑAL', () => {
+      service.analyze(makePayload('dev-1', 40, lastReading));
+      const now = new Date('2026-10-15T10:10:00Z');
+      expect(service.checkWatchdog(now)).not.toContain('dev-1');
+    });
+
+    it('a los 10 minutos y 1 segundo se considera SIN_SEÑAL', () => {
+      service.analyze(makePayload('dev-1', 40, lastReading));
+      const now = new Date('2026-10-15T10:10:01Z');
+      expect(service.checkWatchdog(now)).toContain('dev-1');
+    });
+
+    it('un dispositivo que vuelve a reportar sale de SIN_SEÑAL', () => {
+      service.analyze(makePayload('dev-1', 40, lastReading));
+      expect(service.checkWatchdog(new Date('2026-10-15T10:10:01Z'))).toContain('dev-1');
+
+      service.analyze(makePayload('dev-1', 40, '2026-10-15T10:10:01Z'));
+      expect(service.checkWatchdog(new Date('2026-10-15T10:11:00Z'))).not.toContain('dev-1');
+    });
+  });
 });
