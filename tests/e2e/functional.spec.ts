@@ -153,3 +153,4 @@ test.describe('Suite de Pruebas Funcionales E2E — RTF4 / SCRUM-63', () => {
     await expect(page.locator('[data-testid="view-audit"]')).not.toBeVisible();
   });
 });
+

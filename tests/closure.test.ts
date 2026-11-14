@@ -141,3 +141,4 @@ describe('Módulo de Cierre Auditado — HU-004 (SCRUM-8, SCRUM-18, SCRUM-19, SC
     });
   });
 });
+
