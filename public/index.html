@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Predict - Control & Telemetría IoT</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --success: #10b981;
+      --success-bg: rgba(16, 185, 129, 0.15);
+      --warning: #f59e0b;
+      --warning-bg: rgba(245, 158, 11, 0.15);
+      --danger: #ef4444;
+      --danger-bg: rgba(239, 68, 68, 0.15);
+      --neutral: #64748b;
+      --neutral-bg: rgba(100, 116, 139, 0.15);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+    
+    header { background: #1e293b; border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+    .brand { display: flex; align-items: center; gap: 0.75rem; font-weight: 700; font-size: 1.25rem; }
+    .brand span { color: var(--primary); }
+
+    nav { display: flex; gap: 1rem; align-items: center; }
+    nav button { background: transparent; border: 1px solid var(--border); color: var(--text-muted); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-weight: 500; }
+    nav button:hover { color: var(--text); border-color: var(--primary); }
+    nav button.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+    .user-pill { display: flex; align-items: center; gap: 0.75rem; background: #0f172a; padding: 0.4rem 0.8rem; border-radius: 20px; border: 1px solid var(--border); font-size: 0.875rem; }
+    .btn-logout { background: transparent; border: none; color: var(--danger); cursor: pointer; font-size: 0.875rem; font-weight: 600; padding: 0 0.5rem; }
+
+    main { flex: 1; padding: 2rem; max-width: 1280px; margin: 0 auto; width: 100%; }
+
+    /* Alert Banners */
+    .banner-error { background: var(--danger-bg); border: 1px solid var(--danger); color: #fca5a5; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1.5rem; }
+    
+    /* Login View */
+    .login-container { max-width: 420px; margin: 4rem auto; background: var(--card-bg); padding: 2.5rem; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+    .login-container h2 { margin-bottom: 1.5rem; text-align: center; }
+    .form-group { margin-bottom: 1.25rem; }
+    .form-group label { display: block; font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+    .form-group input, .form-group textarea { width: 100%; padding: 0.75rem 1rem; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 1rem; outline: none; }
+    .form-group input:focus, .form-group textarea:focus { border-color: var(--primary); }
+    .btn-primary { width: 100%; background: var(--primary); color: white; border: none; padding: 0.85rem; border-radius: 6px; font-weight: 600; font-size: 1rem; cursor: pointer; transition: background 0.2s; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .quick-roles { display: flex; gap: 0.5rem; margin-top: 1.5rem; justify-content: center; }
+    .quick-roles button { background: #334155; border: none; color: #cbd5e1; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer; }
+
+    /* Summary Counters */
+    .counters-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .counter-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; }
+    .counter-card .label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
+    .counter-card .value { font-size: 2rem; font-weight: 700; margin-top: 0.25rem; }
+    .counter-card.normal .value { color: var(--success); }
+    .counter-card.warning .value { color: var(--warning); }
+    .counter-card.critical .value { color: var(--danger); }
+    .counter-card.lost .value { color: var(--neutral); }
+
+    /* Sensor Grid */
+    .section-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; }
+    .sensors-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem; }
+    .sensor-card { background: var(--card-bg); border: 2px solid var(--border); border-radius: 10px; padding: 1.5rem; position: relative; transition: border-color 0.2s; }
+    .sensor-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
+    .sensor-name { font-weight: 600; font-size: 1.1rem; }
+    .sensor-id { font-size: 0.8rem; color: var(--text-muted); }
+    
+    /* Badges with Color, Icon and Text */
+    .badge { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.75rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+    .badge-normal { background: var(--success-bg); color: var(--success); border: 1px solid var(--success); }
+    .badge-warning { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning); }
+    .badge-critical { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger); }
+    .badge-lost { background: var(--neutral-bg); color: var(--neutral); border: 1px solid var(--neutral); }
+
+    .sensor-card.status-normal { border-color: var(--success); }
+    .sensor-card.status-warning { border-color: var(--warning); }
+    .sensor-card.status-critical { border-color: var(--danger); animation: pulse 2s infinite; }
+    .sensor-card.status-lost { border-color: var(--neutral); }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+      70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+
+    .metric-row { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .metric-row:last-child { border-bottom: none; }
+    .metric-val { font-weight: 600; }
+
+    /* Simulator Panel */
+    .simulator-panel { background: #162032; border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin-bottom: 2rem; }
+    .sim-buttons { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1rem; }
+    .btn-sim { background: #334155; border: 1px solid #475569; color: var(--text); padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.875rem; }
+    .btn-sim:hover { background: #475569; }
+    .btn-sim.sim-green { border-color: var(--success); color: #34d399; }
+    .btn-sim.sim-amber { border-color: var(--warning); color: #fbbf24; }
+    .btn-sim.sim-red { border-color: var(--danger); color: #f87171; }
+    .btn-sim.sim-gray { border-color: var(--neutral); color: #94a3b8; }
+
+    /* Alerts Log */
+    .alerts-list { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; max-height: 220px; overflow-y: auto; }
+    .alert-item { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 0.875rem; }
+    .alert-item:last-child { border-bottom: none; }
+
+    /* Mobile App View */
+    .mobile-frame { max-width: 440px; margin: 0 auto; background: var(--card-bg); border: 3px solid #334155; border-radius: 36px; padding: 2rem 1.5rem; box-shadow: 0 20px 40px rgba(0,0,0,0.6); position: relative; }
+    .mobile-notch { width: 140px; height: 18px; background: #334155; border-radius: 0 0 12px 12px; margin: -2rem auto 1.5rem auto; }
+    .ot-card { background: #0f172a; border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
+    .ot-badge { display: inline-block; padding: 0.3rem 0.6rem; border-radius: 4px; font-weight: 700; font-size: 0.75rem; margin-bottom: 0.5rem; }
+    .btn-action { width: 100%; padding: 0.85rem; border-radius: 8px; font-weight: 600; margin-bottom: 0.75rem; cursor: pointer; border: none; font-size: 0.95rem; }
+    .btn-action:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-success { background: var(--success); color: white; }
+    .btn-success:hover:not(:disabled) { background: #059669; }
+    .btn-warning { background: var(--warning); color: #000; }
+    .btn-warning:hover:not(:disabled) { background: #d97706; }
+
+    /* Supervisor Audit View */
+    .audit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+    @media (max-width: 768px) { .audit-grid { grid-template-columns: 1fr; } }
+    .audit-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; }
+    .gauge-display { text-align: center; margin: 1.5rem 0; padding: 1.5rem; background: #0f172a; border-radius: 8px; }
+    .timer-val { font-size: 3rem; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--primary); }
+    .samples-val { font-size: 1.25rem; color: var(--text-muted); margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <span>⚡</span> Smart Predict CCO
+    </div>
+    <nav id="main-nav" style="display: none;">
+      <button id="nav-cco" data-testid="nav-cco" class="active" onclick="switchView('cco')">Consola CCO</button>
+      <button id="nav-mobile" data-testid="nav-mobile" onclick="switchView('mobile')">Cuadrilla Técnica</button>
+      <button id="nav-audit" data-testid="nav-audit" onclick="trySwitchToAudit()">Cierre Auditado</button>
+    </nav>
+    <div id="user-header-info" style="display: none;" class="user-pill">
+      <span id="user-display" data-testid="user-info"></span>
+      <button class="btn-logout" data-testid="btn-logout" onclick="logout()">Cerrar sesión</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- RBAC Error Banner -->
+    <div id="rbac-error-banner" data-testid="rbac-error" class="banner-error" style="display: none;">
+      No tiene permisos para esta acción
+    </div>
+
+    <!-- 1. VISTA INICIO DE SESIÓN (HU-012 / SCRUM-58) -->
+    <div id="view-login" class="login-container">
+      <h2>Iniciar Sesión</h2>
+      <div id="login-error" data-testid="login-error" class="banner-error" style="display: none;"></div>
+      
+      <div class="form-group">
+        <label for="username">Usuario</label>
+        <input type="text" id="username" data-testid="input-username" placeholder="operador, supervisor o tecnico">
+      </div>
+      
+      <div class="form-group">
+        <label for="password">Contraseña</label>
+        <input type="password" id="password" data-testid="input-password" placeholder="Contraseña">
+      </div>
+
+      <button id="btn-login" data-testid="btn-login" class="btn-primary" onclick="login()">Ingresar al Sistema</button>
+
+      <div class="quick-roles">
+        <button type="button" onclick="quickFill('operador', 'operador123')">Operador</button>
+        <button type="button" onclick="quickFill('supervisor', 'supervisor123')">Supervisor</button>
+        <button type="button" onclick="quickFill('tecnico', 'tecnico123')">Técnico</button>
+      </div>
+    </div>
+
+    <!-- 2. VISTA CONSOLA CCO (HU-009 / SCRUM-46) -->
+    <div id="view-cco" data-testid="view-cco" style="display: none;">
+      <!-- Contadores de Estado -->
+      <div class="counters-grid">
+        <div class="counter-card">
+          <div class="label">Total Sensores</div>
+          <div id="cnt-total" class="value" data-testid="counter-total">3</div>
+        </div>
+        <div class="counter-card normal">
+          <div class="label">Normal</div>
+          <div id="cnt-normal" class="value" data-testid="counter-normal">3</div>
+        </div>
+        <div class="counter-card warning">
+          <div class="label">Advertencia</div>
+          <div id="cnt-warning" class="value" data-testid="counter-warning">0</div>
+        </div>
+        <div class="counter-card critical">
+          <div class="label">Crítico</div>
+          <div id="cnt-critical" class="value" data-testid="counter-critical">0</div>
+        </div>
+        <div class="counter-card lost">
+          <div class="label">Sin Señal</div>
+          <div id="cnt-lost" class="value" data-testid="counter-lost-signal">0</div>
+        </div>
+      </div>
+
+      <!-- Panel Simulador Integrado (SCRUM-62) -->
+      <div class="simulator-panel">
+        <h3>Simulador de Ingesta y Pruebas Operativas (SCRUM-62)</h3>
+        <p style="color: var(--text-muted); font-size: 0.875rem; margin-top: 0.25rem;">
+          Inyecte telemetría directa al sensor principal (sensor-101) para evaluar las reglas de negocio RN001 a RN004.
+        </p>
+        <div class="sim-buttons">
+          <button class="btn-sim sim-green" data-testid="btn-sim-normal" onclick="sendTelemetry(40.0)">
+            40 PSI normal
+          </button>
+          <button class="btn-sim sim-amber" data-testid="btn-sim-warning" onclick="sendTelemetry(47.0)">
+            47 PSI advertencia
+          </button>
+          <button class="btn-sim sim-red" data-testid="btn-sim-critical" onclick="sendCriticalStreak()">
+            60 PSI x3 crítico
+          </button>
+          <button class="btn-sim sim-gray" data-testid="btn-sim-watchdog" onclick="triggerWatchdog()">
+            Disparo de watchdog SIN_SEÑAL
+          </button>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; margin-top: 1rem; align-items: center;">
+          <input type="number" id="manual-pressure" data-testid="input-manual-pressure" step="0.1" placeholder="Ej: 41.2" style="max-width: 160px; padding: 0.5rem; background: #0f172a; border: 1px solid var(--border); color: white; border-radius: 4px;">
+          <button class="btn-sim" data-testid="btn-send-manual-telemetry" onclick="sendManualTelemetry()">
+            Inyectar Lectura Manual
+          </button>
+        </div>
+      </div>
+
+      <!-- Tarjetas de Sensores -->
+      <div class="section-title">
+        <span>Monitoreo de Válvulas y Estaciones en Tiempo Real</span>
+      </div>
+      <div id="sensors-container" class="sensors-grid"></div>
+
+      <!-- Registro de Alertas Recientes -->
+      <div class="section-title" style="margin-top: 1.5rem;">
+        <span>Registro de Alertas Activas (Últimos Eventos)</span>
+      </div>
+      <div id="alerts-container" class="alerts-list" data-testid="alerts-list">
+        <div style="color: var(--text-muted); padding: 0.5rem;">Sin alertas registradas aún.</div>
+      </div>
+    </div>
+
+    <!-- 3. VISTA APP MÓVIL CUADRILLA TÉCNICA (HU-010 / SCRUM-50) -->
+    <div id="view-mobile" data-testid="view-mobile" style="display: none;">
+      <div class="mobile-frame">
+        <div class="mobile-notch"></div>
+        <h3 style="text-align: center; margin-bottom: 1rem;">Cuadrilla Técnica Alpha</h3>
+        <p style="text-align: center; color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">
+          Despacho Automático & Intervención en Campo
+        </p>
+
+        <div class="ot-card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <span style="font-weight: 700; color: var(--primary);" id="mobile-ot-id" data-testid="mobile-ot-id">OT-101</span>
+            <span id="mobile-ot-status-badge" class="ot-badge" data-testid="mobile-ot-status" style="background: #334155; color: white;">ASIGNADA</span>
+          </div>
+          <div style="font-size: 0.875rem; margin-bottom: 0.35rem;">
+            <strong>Sensor:</strong> <span id="mobile-sensor-name">Válvula Principal Norte (sensor-101)</span>
+          </div>
+          <div style="font-size: 0.875rem; margin-bottom: 0.35rem;">
+            <strong>Cuadrante:</strong> Sector Q1 (Distancia: 2.8 km)
+          </div>
+          <div style="font-size: 0.875rem; color: var(--text-muted);">
+            <strong>Motivo:</strong> Evento CRITICAL_ALERT_L1 sostenido.
+          </div>
+        </div>
+
+        <button id="btn-confirm-arrival" data-testid="btn-confirm-arrival" class="btn-action btn-success" onclick="confirmArrival()">
+          Confirmar llegada (EN_INTERVENCION)
+        </button>
+
+        <button id="btn-request-closure" data-testid="btn-request-closure" class="btn-action btn-warning" disabled onclick="requestClosure()">
+          Solicitar cierre técnico (EN_AUDITORIA)
+        </button>
+
+        <div id="mobile-message" style="margin-top: 1rem; font-size: 0.875rem; text-align: center; color: var(--text-muted);"></div>
+      </div>
+    </div>
+
+    <!-- 4. VISTA PANTALLA DE CIERRE AUDITADO SUPERVISOR (HU-011 / SCRUM-54) -->
+    <div id="view-audit" data-testid="view-audit" style="display: none;">
+      <div class="section-title">
+        <span>Cierre Auditado y Estabilización (HU-011 / RN004)</span>
+        <span id="audit-ot-badge" class="badge badge-normal" data-testid="audit-ot-status">EN_AUDITORIA</span>
+      </div>
+
+      <div class="audit-grid">
+        <!-- Panel de Estabilización de 15 Minutos -->
+        <div class="audit-card">
+          <h3>Ventana de Estabilización (15 Minutos)</h3>
+          <p style="color: var(--text-muted); font-size: 0.875rem; margin-top: 0.25rem;">
+            Requiere lecturas continuas entre 36 y 44 PSI (Nominal: 40 PSI). Cualquier pico aborta la auditoría.
+          </p>
+
+          <div class="gauge-display">
+            <div id="audit-timer" class="timer-val" data-testid="audit-timer">15:00</div>
+            <div id="audit-samples-count" class="samples-val" data-testid="audit-samples-count">Muestras: 30 / 30 requeridas</div>
+            <div id="audit-message" data-testid="audit-message" style="margin-top: 1rem; font-weight: 600; font-size: 0.95rem;">
+              En espera de validación de estabilidad
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            <button class="btn-sim sim-green" data-testid="btn-sim-stabilization" onclick="simulateStabilization()">
+              Adelantar 15 minutos (Cierre Conforme)
+            </button>
+            <button class="btn-sim sim-red" data-testid="btn-sim-spike" onclick="simulateSpike()">
+              Inyectar pico 62 PSI (al min 13:45)
+            </button>
+          </div>
+        </div>
+
+        <!-- Panel de Cierre Forzado -->
+        <div class="audit-card">
+          <h3>Cierre Forzado con Control RBAC (SCRUM-19)</h3>
+          <p style="color: var(--text-muted); font-size: 0.875rem; margin-top: 0.25rem;">
+            Exclusivo para el rol <strong>SUPERVISOR_CCO</strong>. Requiere justificación técnica obligatoria.
+          </p>
+
+          <div id="forced-closure-error" data-testid="forced-closure-error" class="banner-error" style="display: none; margin-top: 1rem;"></div>
+
+          <div class="form-group" style="margin-top: 1.25rem;">
+            <label for="justification">Justificación Técnica Obligatoria:</label>
+            <textarea id="justification" data-testid="forced-closure-justification" rows="4" placeholder="Ingrese el detalle técnico que justifica el cierre forzado de la orden..."></textarea>
+          </div>
+
+          <button id="btn-force-close" data-testid="btn-force-close" class="btn-action btn-warning" onclick="forceClose()">
+            Aplicar Cierre Forzado (CERRADA_FORZADA)
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Estado local de la aplicación
+    let currentUser = null;
+    let currentView = 'login';
+    let currentOt = { id: 'OT-101', status: 'ASIGNADA', readings: [] };
+
+    // Cargar credenciales preconfiguradas
+    function quickFill(u, p) {
+      document.getElementById('username').value = u;
+      document.getElementById('password').value = p;
+    }
+
+    // Autenticación (HU-012)
+    async function login() {
+      const uInput = document.getElementById('username').value;
+      const pInput = document.getElementById('password').value;
+      const errBox = document.getElementById('login-error');
+      errBox.style.display = 'none';
+
+      if (!uInput || uInput.trim() === '') {
+        errBox.textContent = 'El usuario es obligatorio';
+        errBox.style.display = 'block';
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: uInput, password: pInput })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          errBox.textContent = data.error || 'Usuario o contraseña incorrectos';
+          errBox.style.display = 'block';
+          return;
+        }
+
+        currentUser = data.user;
+        document.getElementById('user-display').textContent = `${currentUser.name} (${currentUser.role})`;
+        document.getElementById('user-header-info').style.display = 'flex';
+        document.getElementById('main-nav').style.display = 'flex';
+
+        // Redirección inicial según rol
+        if (currentUser.role === 'TECNICO_CAMPO') {
+          switchView('mobile');
+        } else {
+          switchView('cco');
+        }
+      } catch (err) {
+        errBox.textContent = 'Error de conexión con el servidor';
+        errBox.style.display = 'block';
+      }
+    }
+
+    function logout() {
+      currentUser = null;
+      document.getElementById('user-header-info').style.display = 'none';
+      document.getElementById('main-nav').style.display = 'none';
+      document.getElementById('username').value = '';
+      document.getElementById('password').value = '';
+      switchView('login');
+    }
+
+    // Control de Vistas y RBAC
+    function switchView(viewName) {
+      currentView = viewName;
+      document.getElementById('rbac-error-banner').style.display = 'none';
+
+      ['login', 'cco', 'mobile', 'audit'].forEach(v => {
+        const el = document.getElementById(`view-${v}`);
+        if (el) el.style.display = v === viewName ? 'block' : 'none';
+      });
+
+      ['cco', 'mobile', 'audit'].forEach(v => {
+        const btn = document.getElementById(`nav-${v}`);
+        if (btn) {
+          if (v === viewName) btn.classList.add('active');
+          else btn.classList.remove('active');
+        }
+      });
+
+      if (viewName === 'cco') refreshCco();
+      if (viewName === 'mobile') refreshMobile();
+      if (viewName === 'audit') refreshAudit();
+    }
+
+    function trySwitchToAudit() {
+      if (currentUser && currentUser.role === 'TECNICO_CAMPO') {
+        const banner = document.getElementById('rbac-error-banner');
+        banner.textContent = 'No tiene permisos para esta acción';
+        banner.style.display = 'block';
+        return;
+      }
+      switchView('audit');
+    }
+
+    // Refrescar Consola CCO
+    async function refreshCco() {
+      try {
+        const res = await fetch('/api/sensors');
+        const data = await res.json();
+        
+        // Contadores
+        document.getElementById('cnt-total').textContent = data.summary.total;
+        document.getElementById('cnt-normal').textContent = data.summary.normal;
+        document.getElementById('cnt-warning').textContent = data.summary.warning;
+        document.getElementById('cnt-critical').textContent = data.summary.critical;
+        document.getElementById('cnt-lost').textContent = data.summary.lostSignal;
+
+        // Render de Tarjetas de Sensores
+        const container = document.getElementById('sensors-container');
+        container.innerHTML = '';
+
+        data.sensors.forEach(s => {
+          let badgeClass = 'badge-normal';
+          let statusText = 'Normal';
+          let statusIcon = '●';
+          let cardClass = 'status-normal';
+
+          if (s.severity === 'WARNING_L2') {
+            badgeClass = 'badge-warning';
+            statusText = 'Advertencia';
+            statusIcon = '▲';
+            cardClass = 'status-warning';
+          } else if (s.severity === 'CRITICAL_ALERT_L1') {
+            badgeClass = 'badge-critical';
+            statusText = 'Crítico';
+            statusIcon = '✖';
+            cardClass = 'status-critical';
+          } else if (s.severity === 'SIN_SEÑAL') {
+            badgeClass = 'badge-lost';
+            statusText = 'Sin señal';
+            statusIcon = '◌';
+            cardClass = 'status-lost';
+          }
+
+          const card = document.createElement('div');
+          card.className = `sensor-card ${cardClass}`;
+          card.setAttribute('data-testid', `sensor-card-${s.id}`);
+
+          card.innerHTML = `
+            <div class="sensor-header">
+              <div>
+                <div class="sensor-name">${s.name}</div>
+                <div class="sensor-id">${s.id} | Cuadrante ${s.quadrant}</div>
+              </div>
+              <span class="badge ${badgeClass}" data-testid="sensor-status-${s.id}">
+                <i>${statusIcon}</i> ${statusText}
+              </span>
+            </div>
+            <div class="metric-row">
+              <span style="color: var(--text-muted)">Presión:</span>
+              <span class="metric-val" data-testid="sensor-pressure-${s.id}">${Number(s.pressure).toFixed(1)} PSI</span>
+            </div>
+            <div class="metric-row">
+              <span style="color: var(--text-muted)">Temperatura:</span>
+              <span class="metric-val">${s.temperature} °C</span>
+            </div>
+            <div class="metric-row">
+              <span style="color: var(--text-muted)">Vibración:</span>
+              <span class="metric-val">${s.vibration} mm/s</span>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+
+        // Alertas
+        const alertsBox = document.getElementById('alerts-container');
+        if (data.alerts && data.alerts.length > 0) {
+          alertsBox.innerHTML = data.alerts.map(a => `
+            <div class="alert-item">
+              <div>
+                <strong>${a.deviceId}</strong> - ${a.severity}
+                <div style="font-size: 0.75rem; color: var(--text-muted)">${new Date(a.timestamp).toLocaleTimeString()}</div>
+              </div>
+              <span style="font-weight: 700; color: ${a.severity.includes('CRITICAL') ? 'var(--danger)' : 'var(--warning)'}">
+                ${a.pressure} PSI
+              </span>
+            </div>
+          `).join('');
+        }
+      } catch (e) {
+        console.error('Error al actualizar CCO:', e);
+      }
+    }
+
+    // Ingesta de Telemetría (Simulador)
+    async function sendTelemetry(pressureVal) {
+      await fetch('/api/telemetry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deviceId: 'sensor-101',
+          metrics: { pressure: pressureVal, temperature: 25.0, vibration: 5.0 }
+        })
+      });
+      refreshCco();
+    }
+
+    async function sendManualTelemetry() {
+      const val = parseFloat(document.getElementById('manual-pressure').value);
+      if (!isNaN(val)) {
+        await sendTelemetry(val);
+      }
+    }
+
+    async function sendCriticalStreak() {
+      // Enviar 3 ciclos de 60 PSI para disparar CRITICAL_ALERT_L1
+      await sendTelemetry(60.0);
+      await sendTelemetry(60.0);
+      await sendTelemetry(60.0);
+      refreshCco();
+    }
+
+    async function triggerWatchdog() {
+      await fetch('/api/watchdog/trigger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceId: 'sensor-101' })
+      });
+      refreshCco();
+    }
+
+    // Cuadrilla Técnica Móvil
+    async function refreshMobile() {
+      try {
+        const res = await fetch('/api/work-orders/OT-101');
+        if (res.ok) {
+          const data = await res.json();
+          currentOt = data.order;
+          
+          const statusBadge = document.getElementById('mobile-ot-status-badge');
+          statusBadge.textContent = currentOt.status;
+          
+          const btnConfirm = document.getElementById('btn-confirm-arrival');
+          const btnRequest = document.getElementById('btn-request-closure');
+          
+          if (currentOt.status === 'ASIGNADA') {
+            btnConfirm.disabled = false;
+            btnRequest.disabled = true; // Deshabilitado antes de confirmar llegada
+          } else if (currentOt.status === 'EN_INTERVENCION') {
+            btnConfirm.disabled = true;
+            btnRequest.disabled = false; // Habilitado tras confirmar llegada
+          } else {
+            btnConfirm.disabled = true;
+            btnRequest.disabled = true;
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function confirmArrival() {
+      const res = await fetch('/api/work-orders/OT-101/arrival', { method: 'POST' });
+      if (res.ok) {
+        document.getElementById('mobile-message').textContent = 'Llegada confirmada. Estado: EN_INTERVENCION';
+        refreshMobile();
+      }
+    }
+
+    async function requestClosure() {
+      const res = await fetch('/api/work-orders/OT-101/start-audit', { method: 'POST' });
+      if (res.ok) {
+        document.getElementById('mobile-message').textContent = 'Auditoría solicitada. Estado: EN_AUDITORIA';
+        refreshMobile();
+      }
+    }
+
+    // Cierre Auditado Supervisor
+    async function refreshAudit() {
+      try {
+        const res = await fetch('/api/work-orders/OT-101');
+        if (res.ok) {
+          const data = await res.json();
+          currentOt = data.order;
+
+          const badge = document.getElementById('audit-ot-badge');
+          badge.textContent = currentOt.status;
+          
+          if (currentOt.status === 'CERRADA_CONFORME') {
+            badge.className = 'badge badge-normal';
+            document.getElementById('audit-message').textContent = 'Estabilización de 15 minutos completada con éxito';
+            document.getElementById('audit-samples-count').textContent = 'Muestras: 30 / 30 en rango';
+            document.getElementById('audit-timer').textContent = '15:00';
+          } else if (currentOt.status === 'EN_INTERVENCION') {
+            badge.className = 'badge badge-warning';
+            document.getElementById('audit-message').textContent = currentOt.auditMessage || 'Inestabilidad detectada';
+          } else if (currentOt.status === 'CERRADA_FORZADA') {
+            badge.className = 'badge badge-warning';
+            document.getElementById('audit-message').textContent = currentOt.auditMessage || 'Cierre forzado registrado';
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function simulateStabilization() {
+      const res = await fetch('/api/work-orders/OT-101/simulate-stabilization', { method: 'POST' });
+      if (res.ok) {
+        refreshAudit();
+      }
+    }
+
+    async function simulateSpike() {
+      const res = await fetch('/api/work-orders/OT-101/simulate-spike', { method: 'POST' });
+      if (res.ok) {
+        refreshAudit();
+      }
+    }
+
+    async function forceClose() {
+      const errBox = document.getElementById('forced-closure-error');
+      errBox.style.display = 'none';
+
+      // Validación RBAC local y remota
+      if (!currentUser || currentUser.role !== 'SUPERVISOR_CCO') {
+        const banner = document.getElementById('rbac-error-banner');
+        banner.textContent = 'No tiene permisos para esta acción';
+        banner.style.display = 'block';
+        return;
+      }
+
+      const just = document.getElementById('justification').value;
+      if (!just || just.trim() === '') {
+        errBox.textContent = 'La justificación técnica es obligatoria';
+        errBox.style.display = 'block';
+        return;
+      }
+
+      const res = await fetch('/api/work-orders/OT-101/force-close', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userRole: currentUser.role, justification: just })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        errBox.textContent = data.error || 'Error al forzar cierre';
+        errBox.style.display = 'block';
+      } else {
+        refreshAudit();
+      }
+    }
+
+    // Auto-refresh cada 3 segundos si está en vista CCO
+    setInterval(() => {
+      if (currentView === 'cco') refreshCco();
+    }, 3000);
+  </script>
+</body>
+</html>
+
