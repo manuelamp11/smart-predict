@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express, { NextFunction, Request, Response } from 'express';
 import path from 'path';
 import { TelemetryService } from './modules/telemetry/telemetry.service';
 import { AnomalyService } from './modules/anomaly/anomaly.service';
@@ -203,6 +203,20 @@ app.post('/api/telemetry', (req: Request, res: Response) => {
   });
 });
 
+// API v1 de telemetría (HU-007): ingesta estricta y consulta; no analiza anomalías
+app.post('/api/v1/telemetry', (req: Request, res: Response) => {
+  const outcome = telemetryService.ingestStrict(req.body);
+  if (outcome.status === 'ACCEPTED') {
+    res.status(201).json({ ingestId: outcome.ingestId });
+    return;
+  }
+  res.status(outcome.status === 'INVALID_FORMAT' ? 400 : 422).json({ errors: outcome.errors });
+});
+
+app.get('/api/v1/telemetry/:deviceId', (req: Request, res: Response) => {
+  res.status(200).json(telemetryService.getByDevice(getParam(req, 'deviceId')));
+});
+
 // Obtener estado de sensores y resumen CCO (HU-009)
 app.get('/api/sensors', (_req: Request, res: Response) => {
   const list = Array.from(sensorsState.values());
@@ -374,6 +388,21 @@ app.post('/api/reset', (_req: Request, res: Response) => {
   delete ot.auditMessage;
   delete ot.forcedClosureDetails;
   res.json({ success: true });
+});
+
+// Errores de parseo (JSON mal formado) como JSON, no HTML
+app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
+  if (res.headersSent) {
+    next(err);
+    return;
+  }
+  const status =
+    typeof err === 'object' && err !== null && 'status' in err && typeof err.status === 'number' ? err.status : 500;
+  if (status >= 400 && status < 500) {
+    res.status(status).json({ errors: [{ field: 'body', message: 'JSON mal formado o solicitud inválida' }] });
+    return;
+  }
+  res.status(500).json({ errors: [{ field: 'server', message: 'Error interno' }] });
 });
 
 if (require.main === module) {
