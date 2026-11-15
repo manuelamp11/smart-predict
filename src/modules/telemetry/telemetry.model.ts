@@ -14,6 +14,16 @@ export interface TelemetryPayload {
   metrics: TelemetryMetrics;
 }
 
+export interface ValidationIssue {
+  field: string;
+  message: string;
+}
+
+export type IngestOutcome =
+  | { status: 'ACCEPTED'; ingestId: string }
+  | { status: 'INVALID_FORMAT'; errors: ValidationIssue[] }
+  | { status: 'OUT_OF_RANGE'; errors: ValidationIssue[] };
+
 export interface ValidationResult {
   valid: boolean;
   errors: string[];
