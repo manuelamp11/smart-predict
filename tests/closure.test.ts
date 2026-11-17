@@ -140,5 +140,85 @@ describe('Módulo de Cierre Auditado — HU-004 (SCRUM-8, SCRUM-18, SCRUM-19, SC
       }).toThrow('La justificación técnica es obligatoria');
     });
   });
+
+  describe('HU-011 / SCRUM-54: Progreso en vivo y acción explícita "Cerrar orden"', () => {
+    const t0 = new Date('2026-11-17T10:00:00.000Z');
+    const at = (seconds: number) => new Date(t0.getTime() + seconds * 1000);
+
+    function auditWithStableSamples(orderId: string, count = 30): void {
+      service.createWorkOrder(orderId, 'sensor-101');
+      service.confirmArrival(orderId);
+      service.startAudit(orderId, t0);
+      for (let i = 1; i <= count; i++) {
+        service.recordReading(orderId, 40.0, at(i * 30));
+      }
+    }
+
+    it('reporta la cuenta regresiva de la ventana (15:00 hacia 00:00)', () => {
+      service.createWorkOrder('OT-4001', 'sensor-101');
+      service.startAudit('OT-4001', t0);
+
+      expect(service.getAuditProgress('OT-4001', t0).remainingSeconds).toBe(900);
+      expect(service.getAuditProgress('OT-4001', at(5 * 60)).remainingSeconds).toBe(600);
+      expect(service.getAuditProgress('OT-4001', at(20 * 60)).remainingSeconds).toBe(0);
+    });
+
+    it('fuera de auditoría reporta la ventana completa y no permite cerrar', () => {
+      service.createWorkOrder('OT-4002', 'sensor-101');
+      const progress = service.getAuditProgress('OT-4002', at(3600));
+
+      expect(progress.remainingSeconds).toBe(900);
+      expect(progress.canClose).toBe(false);
+    });
+
+    it('mantiene "Cerrar orden" bloqueado antes de completar los 15 minutos', () => {
+      auditWithStableSamples('OT-4003', 20);
+
+      expect(service.getAuditProgress('OT-4003', at(10 * 60)).canClose).toBe(false);
+      expect(() => service.closeOrder('OT-4003', 'SUPERVISOR_CCO', at(10 * 60))).toThrow(
+        'La ventana de estabilización de 15 minutos aún no se completa',
+      );
+      expect(service.getWorkOrder('OT-4003')?.status).toBe('EN_AUDITORIA');
+    });
+
+    it('bloquea el cierre si el tiempo se cumplió pero faltan muestras en banda', () => {
+      auditWithStableSamples('OT-4004', 12);
+
+      expect(() => service.closeOrder('OT-4004', 'SUPERVISOR_CCO', at(15 * 60))).toThrow(
+        'Muestras insuficientes en banda nominal: 12 / 30',
+      );
+    });
+
+    it('cierra conforme al completar 15 minutos estables con 30 / 30 muestras', () => {
+      auditWithStableSamples('OT-4005');
+
+      const progress = service.getAuditProgress('OT-4005', at(15 * 60));
+      expect(progress.nominalSamples).toBe(30);
+      expect(progress.canClose).toBe(true);
+
+      const result = service.closeOrder('OT-4005', 'SUPERVISOR_CCO', at(15 * 60));
+      expect(result.success).toBe(true);
+      expect(result.status).toBe('CERRADA_CONFORME');
+      expect(service.getWorkOrder('OT-4005')?.status).toBe('CERRADA_CONFORME');
+    });
+
+    it('impide cerrar tras una lectura fuera de banda (la orden vuelve a EN_INTERVENCION)', () => {
+      auditWithStableSamples('OT-4006', 27);
+      service.recordReading('OT-4006', 62.0, at(13 * 60 + 45));
+
+      expect(service.getWorkOrder('OT-4006')?.status).toBe('EN_INTERVENCION');
+      expect(() => service.closeOrder('OT-4006', 'SUPERVISOR_CCO', at(15 * 60))).toThrow(
+        'La orden no está en auditoría de estabilización',
+      );
+    });
+
+    it('rechaza "Cerrar orden" para el rol TECNICO_CAMPO', () => {
+      auditWithStableSamples('OT-4007');
+
+      expect(() => service.closeOrder('OT-4007', 'TECNICO_CAMPO', at(15 * 60))).toThrow(
+        'No tiene permisos para esta acción',
+      );
+    });
+  });
 });
 

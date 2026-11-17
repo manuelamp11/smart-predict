@@ -195,6 +195,14 @@ app.post('/api/telemetry', (req: Request, res: Response) => {
   currentSensor.lastSeen = effectiveTimestamp;
   sensorsState.set(effectiveDeviceId, currentSensor);
 
+  // Si el sensor tiene una orden en auditoría, la lectura alimenta la ventana de estabilización (RN004)
+  const auditingOrder = closureService
+    .getAllWorkOrders()
+    .find((o) => o.deviceId === effectiveDeviceId && o.status === 'EN_AUDITORIA');
+  if (auditingOrder) {
+    closureService.recordReading(auditingOrder.id, payload.metrics.pressure, new Date());
+  }
+
   res.json({
     success: true,
     telemetry: payload,
@@ -264,7 +272,7 @@ app.get('/api/work-orders/:id', (req: Request, res: Response) => {
     res.status(404).json({ error: 'Orden no encontrada' });
     return;
   }
-  res.json({ order });
+  res.json({ order, audit: closureService.getAuditProgress(id) });
 });
 
 // Confirmar llegada de cuadrilla (HU-010)
@@ -291,7 +299,8 @@ app.post('/api/work-orders/:id/start-audit', (req: Request, res: Response) => {
   }
 });
 
-// Simulación de estabilización de 15 min completa (HU-011 / CPF-21)
+// Simulación: adelanta la ventana de 15 min con 30 lecturas estables (HU-011 / CPF-21).
+// No cierra la orden: deja habilitado "Cerrar orden" para el cierre explícito (SCRUM-54).
 app.post('/api/work-orders/:id/simulate-stabilization', (req: Request, res: Response) => {
   const orderId = getParam(req, 'id');
   const order = closureService.getWorkOrder(orderId);
@@ -300,25 +309,34 @@ app.post('/api/work-orders/:id/simulate-stabilization', (req: Request, res: Resp
     return;
   }
 
-  // Si no estaba en auditoría, inicializarla
-  if (order.status !== 'EN_AUDITORIA') {
-    closureService.startAudit(orderId);
-  }
+  const windowMs = 15 * 60 * 1000;
+  const start = new Date(Date.now() - windowMs);
+  closureService.startAudit(orderId, start);
 
-  // Inyectar 30 lecturas dentro de la banda nominal (36-44 PSI)
-  order.readings = [];
+  // 30 lecturas dentro de la banda nominal (36-44 PSI), una cada 30 s
   for (let i = 1; i <= 30; i++) {
-    const min = Math.floor(i / 2);
-    const sec = (i % 2) * 30 === 0 ? '00' : '30';
-    order.readings.push({
-      pressure: 40.0 + ((i % 5) - 2) * 0.5,
-      timestamp: new Date().toISOString(),
-      minute: `${min}:${sec}`,
-    });
+    closureService.recordReading(
+      orderId,
+      40.0 + ((i % 5) - 2) * 0.5,
+      new Date(start.getTime() + i * 30 * 1000),
+    );
   }
 
-  const result = closureService.completeAudit(orderId);
-  res.json({ success: true, result, order });
+  res.json({ success: true, order, audit: closureService.getAuditProgress(orderId) });
+});
+
+// Cierre conforme explícito "Cerrar orden" (HU-011 / SCRUM-54)
+app.post('/api/work-orders/:id/close', (req: Request, res: Response) => {
+  const orderId = getParam(req, 'id');
+  const { userRole } = req.body || {};
+  try {
+    const result = closureService.closeOrder(orderId, userRole as UserRole);
+    res.json({ success: true, result, order: closureService.getWorkOrder(orderId) });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Error al cerrar la orden';
+    const status = message === 'No tiene permisos para esta acción' ? 403 : 400;
+    res.status(status).json({ error: message });
+  }
 });
 
 // Simulación de pico de inestabilidad 62 PSI al min 13:45 (HU-011 / CPF-22)
@@ -330,14 +348,14 @@ app.post('/api/work-orders/:id/simulate-spike', (req: Request, res: Response) =>
     return;
   }
 
-  if (order.status !== 'EN_AUDITORIA') {
-    closureService.startAudit(orderId);
-  }
+  const start = new Date(Date.now() - (13 * 60 + 45) * 1000);
+  closureService.startAudit(orderId, start);
 
   // Lecturas previas estables
+  const ts = (min: number) => new Date(start.getTime() + min * 60 * 1000).toISOString();
   order.readings = [
-    { pressure: 40.2, timestamp: new Date().toISOString(), minute: '05:00' },
-    { pressure: 41.0, timestamp: new Date().toISOString(), minute: '10:00' },
+    { pressure: 40.2, timestamp: ts(5), minute: '05:00' },
+    { pressure: 41.0, timestamp: ts(10), minute: '10:00' },
   ];
 
   // Inyectar el pico de inestabilidad

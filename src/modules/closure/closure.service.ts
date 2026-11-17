@@ -1,4 +1,5 @@
 import type {
+  AuditProgress,
   AuditReading,
   AuditResult,
   UserRole,
@@ -177,6 +178,70 @@ export class ClosureValidationService {
       message: order.auditMessage,
       readingsCount: order.readings.length,
     };
+  }
+
+  /**
+   * Estado en vivo de la ventana de estabilización (HU-011 / SCRUM-54):
+   * tiempo restante, muestras en banda nominal y si ya se puede cerrar la orden.
+   */
+  getAuditProgress(orderId: string, now: Date = new Date()): AuditProgress {
+    const order = this.workOrders.get(orderId);
+    if (!order) {
+      throw new Error(`Orden de trabajo no encontrada: ${orderId}`);
+    }
+
+    const windowSeconds = STABILIZATION_WINDOW_MINUTES * 60;
+    const inAudit = order.status === 'EN_AUDITORIA' && order.auditStartTime !== undefined;
+    const elapsedSeconds = inAudit
+      ? Math.max(0, Math.floor((now.getTime() - (order.auditStartTime as Date).getTime()) / 1000))
+      : 0;
+    const nominalSamples = order.readings.filter((r) => this.isPressureNominal(r.pressure)).length;
+    const allNominal = nominalSamples === order.readings.length;
+    const windowComplete = inAudit && elapsedSeconds >= windowSeconds;
+
+    return {
+      status: order.status,
+      windowSeconds,
+      elapsedSeconds: Math.min(elapsedSeconds, windowSeconds),
+      remainingSeconds: inAudit ? Math.max(0, windowSeconds - elapsedSeconds) : windowSeconds,
+      nominalSamples,
+      totalSamples: order.readings.length,
+      requiredSamples: SAMPLES_REQUIRED_FOR_CONFORMANCE,
+      windowComplete,
+      canClose:
+        windowComplete && allNominal && nominalSamples >= SAMPLES_REQUIRED_FOR_CONFORMANCE,
+    };
+  }
+
+  /**
+   * Acción explícita "Cerrar orden" (HU-011 / SCRUM-54).
+   * Solo procede si la ventana de 15 minutos se completó con todas las muestras en banda.
+   */
+  closeOrder(orderId: string, role: UserRole, now: Date = new Date()): AuditResult {
+    const order = this.workOrders.get(orderId);
+    if (!order) {
+      throw new Error(`Orden de trabajo no encontrada: ${orderId}`);
+    }
+
+    if (role === 'TECNICO_CAMPO') {
+      throw new Error('No tiene permisos para esta acción');
+    }
+
+    if (order.status !== 'EN_AUDITORIA') {
+      throw new Error('La orden no está en auditoría de estabilización');
+    }
+
+    const progress = this.getAuditProgress(orderId, now);
+    if (!progress.windowComplete) {
+      throw new Error('La ventana de estabilización de 15 minutos aún no se completa');
+    }
+    if (!progress.canClose) {
+      throw new Error(
+        `Muestras insuficientes en banda nominal: ${progress.nominalSamples} / ${SAMPLES_REQUIRED_FOR_CONFORMANCE}`,
+      );
+    }
+
+    return this.completeAudit(orderId);
   }
 
   /**

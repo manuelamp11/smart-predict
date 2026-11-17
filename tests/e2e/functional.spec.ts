@@ -92,7 +92,16 @@ test.describe('Suite de Pruebas Funcionales E2E — RTF4 / SCRUM-63', () => {
     await page.click('[data-testid="nav-audit"]');
     await expect(page.locator('[data-testid="view-audit"]')).toBeVisible();
 
+    // "Cerrar orden" bloqueado hasta completar la ventana (SCRUM-54 CA2)
+    const btnClose = page.locator('[data-testid="btn-close-order"]');
+    await expect(btnClose).toBeDisabled();
+
     await page.click('[data-testid="btn-sim-stabilization"]');
+
+    await expect(page.locator('[data-testid="audit-timer"]')).toHaveText('00:00');
+    await expect(page.locator('[data-testid="audit-reading-row"]').first()).toContainText('NORMAL');
+    await expect(btnClose).toBeEnabled();
+    await btnClose.click();
 
     const otStatus = page.locator('[data-testid="audit-ot-status"]');
     await expect(otStatus).toHaveText('CERRADA_CONFORME');
@@ -151,6 +160,78 @@ test.describe('Suite de Pruebas Funcionales E2E — RTF4 / SCRUM-63', () => {
 
     // La vista de auditoría no debe abrirse
     await expect(page.locator('[data-testid="view-audit"]')).not.toBeVisible();
+  });
+
+  test('SCRUM-54 CA1: Cuenta regresiva en vivo y lecturas de la ventana durante la auditoría', async ({ page, request }) => {
+    // La cuadrilla confirma llegada y solicita el cierre: inicia la ventana de 15 min
+    await request.post('/api/work-orders/OT-101/arrival');
+    await request.post('/api/work-orders/OT-101/start-audit');
+
+    await page.fill('[data-testid="input-username"]', 'supervisor');
+    await page.fill('[data-testid="input-password"]', 'supervisor123');
+    await page.click('[data-testid="btn-login"]');
+    await page.click('[data-testid="nav-audit"]');
+
+    // El cronómetro baja desde 15:00
+    await expect(page.locator('[data-testid="audit-timer"]')).toHaveText(/^14:5\d$/, { timeout: 8000 });
+    await expect(page.locator('[data-testid="btn-close-order"]')).toBeDisabled();
+
+    // Una lectura inyectada durante la auditoría aparece en la lista
+    await request.post('/api/telemetry', {
+      data: { deviceId: 'sensor-101', metrics: { pressure: 41.5, temperature: 25, vibration: 5 } },
+    });
+    const firstRow = page.locator('[data-testid="audit-reading-row"]').first();
+    await expect(firstRow).toContainText('41.5 PSI', { timeout: 8000 });
+    await expect(firstRow).toContainText('NORMAL');
+  });
+
+  test('SCRUM-54 CA3: La lectura fuera de banda se lista como FUERA DE RANGO', async ({ page }) => {
+    await page.fill('[data-testid="input-username"]', 'supervisor');
+    await page.fill('[data-testid="input-password"]', 'supervisor123');
+    await page.click('[data-testid="btn-login"]');
+    await page.click('[data-testid="nav-audit"]');
+
+    await page.click('[data-testid="btn-sim-spike"]');
+
+    const firstRow = page.locator('[data-testid="audit-reading-row"]').first();
+    await expect(firstRow).toContainText('62.0 PSI');
+    await expect(firstRow).toContainText('FUERA DE RANGO');
+    await expect(page.locator('[data-testid="btn-close-order"]')).toBeDisabled();
+  });
+
+  test('SCRUM-54 CA4: El panel de cierre forzado no existe en el DOM para OPERADOR_CCO', async ({ page }) => {
+    await page.fill('[data-testid="input-username"]', 'operador');
+    await page.fill('[data-testid="input-password"]', 'operador123');
+    await page.click('[data-testid="btn-login"]');
+    await page.click('[data-testid="nav-audit"]');
+
+    await expect(page.locator('[data-testid="view-audit"]')).toBeVisible();
+    await expect(page.locator('[data-testid="forced-closure-justification"]')).toHaveCount(0);
+    await expect(page.locator('[data-testid="btn-force-close"]')).toHaveCount(0);
+    await expect(page.locator('[data-testid="forced-closure-locked"]')).toBeVisible();
+  });
+
+  test('SCRUM-54 CA5: Dirección directa a #/cierre como TECNICO_CAMPO redirige con mensaje y el servidor rechaza', async ({ page, request }) => {
+    await page.fill('[data-testid="input-username"]', 'tecnico');
+    await page.fill('[data-testid="input-password"]', 'tecnico123');
+    await page.click('[data-testid="btn-login"]');
+    await expect(page.locator('[data-testid="view-mobile"]')).toBeVisible();
+
+    // Escribir la dirección directa de la pantalla de cierre
+    await page.evaluate(() => { window.location.hash = '#/cierre'; });
+
+    await expect(page.locator('[data-testid="rbac-error"]')).toHaveText('No tiene permisos para esta acción');
+    await expect(page.locator('[data-testid="view-mobile"]')).toBeVisible();
+    await expect(page.locator('[data-testid="view-audit"]')).not.toBeVisible();
+    await expect(page).toHaveURL(/#\/cuadrilla$/);
+
+    // El servidor también rechaza la operación
+    const forced = await request.post('/api/work-orders/OT-101/force-close', {
+      data: { userRole: 'TECNICO_CAMPO', justification: 'Intento sin permisos' },
+    });
+    expect(forced.status()).toBe(403);
+    const close = await request.post('/api/work-orders/OT-101/close', { data: { userRole: 'TECNICO_CAMPO' } });
+    expect(close.status()).toBe(403);
   });
 });
 

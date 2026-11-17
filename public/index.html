@@ -3,348 +3,1271 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart Predict - Control & Telemetría IoT</title>
+  <title>Smart Predict — IoT Operations Platform</title>
+  <!-- Tipografías: carga no bloqueante (no retrasa el evento load ni a Playwright) con fallback del sistema -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"></noscript>
   <style>
     :root {
-      --bg: #0f172a;
-      --card-bg: #1e293b;
-      --text: #f8fafc;
-      --text-muted: #94a3b8;
-      --border: #334155;
-      --primary: #3b82f6;
-      --primary-hover: #2563eb;
-      --success: #10b981;
-      --success-bg: rgba(16, 185, 129, 0.15);
-      --warning: #f59e0b;
-      --warning-bg: rgba(245, 158, 11, 0.15);
-      --danger: #ef4444;
-      --danger-bg: rgba(239, 68, 68, 0.15);
-      --neutral: #64748b;
-      --neutral-bg: rgba(100, 116, 139, 0.15);
+      --bg: #08090a;
+      --bg-elevated: #0f1011;
+      --panel: #141516;
+      --panel-hover: #1a1b1d;
+      --border: rgba(255, 255, 255, 0.07);
+      --border-strong: rgba(255, 255, 255, 0.12);
+      --hover: rgba(255, 255, 255, 0.05);
+
+      --text: #f7f8f8;
+      --text-secondary: #b4b8bf;
+      --text-muted: #8a8f98;
+      --text-faint: #62666d;
+
+      --accent: #5e6ad2;
+      --accent-hover: #6d78e0;
+      --accent-2: #38bdf8;
+      --accent-soft: rgba(94, 106, 210, 0.14);
+
+      --ok: #4cb782;
+      --ok-soft: rgba(76, 183, 130, 0.12);
+      --warn: #f2c94c;
+      --warn-soft: rgba(242, 201, 76, 0.12);
+      --crit: #eb5757;
+      --crit-soft: rgba(235, 87, 87, 0.13);
+      --lost: #6b6f76;
+      --lost-soft: rgba(107, 111, 118, 0.14);
+
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+
+      --sidebar-w: 240px;
+      --header-h: 52px;
+      --footer-h: 32px;
+      --radius: 8px;
+      --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
-    
-    header { background: #1e293b; border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
-    .brand { display: flex; align-items: center; gap: 0.75rem; font-weight: 700; font-size: 1.25rem; }
-    .brand span { color: var(--primary); }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 13px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      font-feature-settings: 'cv11', 'ss01';
+      overflow: hidden;
+    }
+    button { font-family: inherit; }
+    h1, h2, h3 { font-weight: 600; letter-spacing: -0.025em; }
 
-    nav { display: flex; gap: 1rem; align-items: center; }
-    nav button { background: transparent; border: 1px solid var(--border); color: var(--text-muted); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-weight: 500; }
-    nav button:hover { color: var(--text); border-color: var(--primary); }
-    nav button.active { background: var(--primary); color: white; border-color: var(--primary); }
+    /* Cifras telemétricas: solo PSI, °C, mm/s, IDs y cronómetro */
+    .num { font-family: var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
 
-    .user-pill { display: flex; align-items: center; gap: 0.75rem; background: #0f172a; padding: 0.4rem 0.8rem; border-radius: 20px; border: 1px solid var(--border); font-size: 0.875rem; }
-    .btn-logout { background: transparent; border: none; color: var(--danger); cursor: pointer; font-size: 0.875rem; font-weight: 600; padding: 0 0.5rem; }
+    .sr-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
 
-    main { flex: 1; padding: 2rem; max-width: 1280px; margin: 0 auto; width: 100%; }
+    /* ============ LOGO ============ */
+    .logo { display: inline-flex; align-items: center; gap: 0.6rem; }
+    .logo svg { flex-shrink: 0; }
+    .logo-word { font-weight: 600; letter-spacing: -0.03em; color: var(--text); }
 
-    /* Alert Banners */
-    .banner-error { background: var(--danger-bg); border: 1px solid var(--danger); color: #fca5a5; padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1.5rem; }
-    
-    /* Login View */
-    .login-container { max-width: 420px; margin: 4rem auto; background: var(--card-bg); padding: 2.5rem; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-    .login-container h2 { margin-bottom: 1.5rem; text-align: center; }
-    .form-group { margin-bottom: 1.25rem; }
-    .form-group label { display: block; font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.5rem; }
-    .form-group input, .form-group textarea { width: 100%; padding: 0.75rem 1rem; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 1rem; outline: none; }
-    .form-group input:focus, .form-group textarea:focus { border-color: var(--primary); }
-    .btn-primary { width: 100%; background: var(--primary); color: white; border: none; padding: 0.85rem; border-radius: 6px; font-weight: 600; font-size: 1rem; cursor: pointer; transition: background 0.2s; }
-    .btn-primary:hover { background: var(--primary-hover); }
-    .quick-roles { display: flex; gap: 0.5rem; margin-top: 1.5rem; justify-content: center; }
-    .quick-roles button { background: #334155; border: none; color: #cbd5e1; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 0.75rem; cursor: pointer; }
+    /* ============ LOGIN (HU-012) ============ */
+    #view-login {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      z-index: 50;
+      overflow: auto;
+    }
+    #loops-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .login-vignette {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center, transparent 0%, rgba(8, 9, 10, 0.55) 60%, rgba(8, 9, 10, 0.95) 100%);
+    }
+    .login-card {
+      position: relative;
+      width: min(380px, calc(100vw - 32px));
+      background: rgba(18, 19, 22, 0.78);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.6);
+      padding: 2rem 1.75rem 1.5rem;
+      animation: rise 0.6s var(--ease) both;
+    }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: none; }
+    }
+    .login-head { text-align: center; margin-bottom: 1.5rem; }
+    .login-head .logo { margin-bottom: 1.25rem; }
+    .login-head .logo-word { font-size: 1.05rem; }
+    .login-head h2 { font-size: 1.15rem; color: var(--text); }
+    .login-head p { color: var(--text-muted); font-size: 0.8rem; margin-top: 0.25rem; }
 
-    /* Summary Counters */
-    .counters-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
-    .counter-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; }
-    .counter-card .label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
-    .counter-card .value { font-size: 2rem; font-weight: 700; margin-top: 0.25rem; }
-    .counter-card.normal .value { color: var(--success); }
-    .counter-card.warning .value { color: var(--warning); }
-    .counter-card.critical .value { color: var(--danger); }
-    .counter-card.lost .value { color: var(--neutral); }
-
-    /* Sensor Grid */
-    .section-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; }
-    .sensors-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem; }
-    .sensor-card { background: var(--card-bg); border: 2px solid var(--border); border-radius: 10px; padding: 1.5rem; position: relative; transition: border-color 0.2s; }
-    .sensor-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
-    .sensor-name { font-weight: 600; font-size: 1.1rem; }
-    .sensor-id { font-size: 0.8rem; color: var(--text-muted); }
-    
-    /* Badges with Color, Icon and Text */
-    .badge { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.75rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
-    .badge-normal { background: var(--success-bg); color: var(--success); border: 1px solid var(--success); }
-    .badge-warning { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning); }
-    .badge-critical { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger); }
-    .badge-lost { background: var(--neutral-bg); color: var(--neutral); border: 1px solid var(--neutral); }
-
-    .sensor-card.status-normal { border-color: var(--success); }
-    .sensor-card.status-warning { border-color: var(--warning); }
-    .sensor-card.status-critical { border-color: var(--danger); animation: pulse 2s infinite; }
-    .sensor-card.status-lost { border-color: var(--neutral); }
-
-    @keyframes pulse {
-      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-      70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    .field { margin-bottom: 0.9rem; }
+    .field label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 0.35rem;
+    }
+    .field input, .field textarea {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 0.85rem;
+      padding: 0.55rem 0.7rem;
+      outline: none;
+      transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+    }
+    .field textarea { resize: vertical; min-height: 96px; }
+    .field input::placeholder, .field textarea::placeholder { color: var(--text-faint); }
+    .field input:focus, .field textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(94, 106, 210, 0.22);
     }
 
-    .metric-row { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-    .metric-row:last-child { border-bottom: none; }
-    .metric-val { font-weight: 600; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: background 0.15s var(--ease), border-color 0.15s var(--ease), color 0.15s var(--ease), opacity 0.15s;
+      white-space: nowrap;
+    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary {
+      width: 100%;
+      background: var(--accent);
+      color: #fff;
+      padding: 0.6rem 1rem;
+      font-size: 0.85rem;
+      margin-top: 0.35rem;
+    }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+    .btn-ghost {
+      background: rgba(255, 255, 255, 0.03);
+      border-color: var(--border-strong);
+      color: var(--text-secondary);
+      padding: 0.42rem 0.75rem;
+    }
+    .btn-ghost:hover:not(:disabled) { background: var(--hover); color: var(--text); }
 
-    /* Simulator Panel */
-    .simulator-panel { background: #162032; border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin-bottom: 2rem; }
-    .sim-buttons { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1rem; }
-    .btn-sim { background: #334155; border: 1px solid #475569; color: var(--text); padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.875rem; }
-    .btn-sim:hover { background: #475569; }
-    .btn-sim.sim-green { border-color: var(--success); color: #34d399; }
-    .btn-sim.sim-amber { border-color: var(--warning); color: #fbbf24; }
-    .btn-sim.sim-red { border-color: var(--danger); color: #f87171; }
-    .btn-sim.sim-gray { border-color: var(--neutral); color: #94a3b8; }
+    .quick-access { margin-top: 1.4rem; padding-top: 1.1rem; border-top: 1px solid var(--border); }
+    .quick-access-label {
+      font-size: 0.7rem;
+      color: var(--text-faint);
+      text-align: center;
+      margin-bottom: 0.6rem;
+    }
+    .quick-roles { display: flex; gap: 0.4rem; justify-content: center; }
+    .quick-roles button {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 0.3rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      cursor: pointer;
+      transition: all 0.15s var(--ease);
+    }
+    .quick-roles button:hover { color: var(--text); border-color: var(--border-strong); background: var(--hover); }
 
-    /* Alerts Log */
-    .alerts-list { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; max-height: 220px; overflow-y: auto; }
-    .alert-item { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 0.875rem; }
-    .alert-item:last-child { border-bottom: none; }
+    /* ============ BANNERS ============ */
+    .banner-error {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--crit-soft);
+      border: 1px solid rgba(235, 87, 87, 0.28);
+      color: #f2a0a0;
+      border-radius: 6px;
+      padding: 0.55rem 0.75rem;
+      font-size: 0.8rem;
+      margin-bottom: 1rem;
+    }
 
-    /* Mobile App View */
-    .mobile-frame { max-width: 440px; margin: 0 auto; background: var(--card-bg); border: 3px solid #334155; border-radius: 36px; padding: 2rem 1.5rem; box-shadow: 0 20px 40px rgba(0,0,0,0.6); position: relative; }
-    .mobile-notch { width: 140px; height: 18px; background: #334155; border-radius: 0 0 12px 12px; margin: -2rem auto 1.5rem auto; }
-    .ot-card { background: #0f172a; border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
-    .ot-badge { display: inline-block; padding: 0.3rem 0.6rem; border-radius: 4px; font-weight: 700; font-size: 0.75rem; margin-bottom: 0.5rem; }
-    .btn-action { width: 100%; padding: 0.85rem; border-radius: 8px; font-weight: 600; margin-bottom: 0.75rem; cursor: pointer; border: none; font-size: 0.95rem; }
-    .btn-action:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-success { background: var(--success); color: white; }
-    .btn-success:hover:not(:disabled) { background: #059669; }
-    .btn-warning { background: var(--warning); color: #000; }
-    .btn-warning:hover:not(:disabled) { background: #d97706; }
+    /* ============ APP SHELL ============ */
+    #app-shell {
+      display: none;
+      grid-template-columns: var(--sidebar-w) 1fr;
+      height: 100vh;
+    }
+    .sidebar {
+      background: var(--bg-elevated);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      z-index: 40;
+    }
+    .sidebar-top {
+      height: var(--header-h);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 0.9rem 0 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-top .logo-word { font-size: 0.9rem; }
+    .env-badge {
+      font-size: 0.65rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      border: 1px solid var(--border-strong);
+      border-radius: 4px;
+      padding: 0.05rem 0.35rem;
+    }
+    .nav-section-label {
+      font-size: 0.68rem;
+      font-weight: 500;
+      color: var(--text-faint);
+      padding: 1rem 1rem 0.35rem;
+    }
+    #main-nav {
+      flex-direction: column;
+      gap: 1px;
+      padding: 0 0.5rem;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      width: 100%;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      padding: 0.42rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.12s var(--ease), color 0.12s var(--ease);
+    }
+    .nav-item svg { color: var(--text-muted); flex-shrink: 0; transition: color 0.12s; }
+    .nav-item:hover { background: var(--hover); color: var(--text); }
+    .nav-item.active { background: rgba(255, 255, 255, 0.07); color: var(--text); }
+    .nav-item.active svg { color: var(--text); }
+    .nav-sim {
+      margin: 0.75rem 0.5rem 0;
+      width: calc(100% - 1rem);
+      border: 1px dashed var(--border-strong);
+      color: var(--text-secondary);
+    }
+    .nav-sim.on { border-style: solid; border-color: rgba(94, 106, 210, 0.45); background: var(--accent-soft); color: var(--text); }
+    .nav-sim.on svg { color: var(--accent-2); }
+    .nav-sim .kbd {
+      margin-left: auto;
+      font-size: 0.65rem;
+      color: var(--text-faint);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 0 0.3rem;
+    }
 
-    /* Supervisor Audit View */
-    .audit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
-    @media (max-width: 768px) { .audit-grid { grid-template-columns: 1fr; } }
-    .audit-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; }
-    .gauge-display { text-align: center; margin: 1.5rem 0; padding: 1.5rem; background: #0f172a; border-radius: 8px; }
-    .timer-val { font-size: 3rem; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--primary); }
-    .samples-val { font-size: 1.25rem; color: var(--text-muted); margin-top: 0.5rem; }
+    .sidebar-spacer { flex: 1; }
+    #user-header-info {
+      margin: 0.5rem;
+      padding: 0.6rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.02);
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      display: grid;
+      place-items: center;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .profile-meta { flex: 1; min-width: 0; }
+    #user-display {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .btn-logout {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      cursor: pointer;
+      padding: 0;
+      transition: color 0.12s;
+    }
+    .btn-logout:hover { color: var(--crit); }
+
+    .workspace {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+    }
+    .app-header {
+      height: var(--header-h);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0 1.25rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(8, 9, 10, 0.85);
+      backdrop-filter: blur(12px);
+    }
+    .header-left { display: flex; align-items: center; gap: 0.75rem; min-width: 0; }
+    .menu-toggle {
+      display: none;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-secondary);
+      width: 30px;
+      height: 30px;
+      place-items: center;
+      cursor: pointer;
+    }
+    .breadcrumbs { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; }
+    .breadcrumbs .sep { color: var(--text-faint); }
+    .breadcrumbs .current { color: var(--text); font-weight: 500; }
+    .header-right { display: flex; align-items: center; gap: 0.9rem; font-size: 0.75rem; color: var(--text-muted); }
+    .live-link { display: inline-flex; align-items: center; gap: 0.45rem; }
+    .live-dot {
+      position: relative;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--ok);
+    }
+    .live-dot::after {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      border: 1px solid var(--ok);
+      animation: ping 2.4s var(--ease) infinite;
+    }
+    @keyframes ping {
+      0% { transform: scale(0.5); opacity: 0.8; }
+      80%, 100% { transform: scale(1.6); opacity: 0; }
+    }
+    .clock { font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+    .header-divider { width: 1px; height: 16px; background: var(--border-strong); }
+
+    main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem 1.5rem 2rem;
+      min-height: 0;
+    }
+    .view-inner { max-width: 1320px; margin: 0 auto; }
+
+    .app-footer {
+      height: var(--footer-h);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.25rem;
+      border-top: 1px solid var(--border);
+      background: var(--bg-elevated);
+      font-size: 0.7rem;
+      color: var(--text-faint);
+      white-space: nowrap;
+      overflow: hidden;
+      gap: 1rem;
+    }
+    .app-footer .ok-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--ok); margin-right: 0.4rem; vertical-align: middle; }
+
+    .scrim { display: none; }
+
+    /* ============ PAGE HEAD ============ */
+    .page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; margin-bottom: 1.25rem; }
+    .page-head h1 { font-size: 1.35rem; }
+    .page-head p { color: var(--text-muted); font-size: 0.8rem; margin-top: 0.2rem; }
+
+    /* ============ PANELS ============ */
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.8rem 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-title { font-size: 0.82rem; font-weight: 600; letter-spacing: -0.015em; color: var(--text); display: flex; align-items: center; gap: 0.5rem; }
+    .panel-title svg { color: var(--text-muted); }
+    .panel-sub { font-size: 0.72rem; color: var(--text-muted); }
+    .panel-body { padding: 1rem; }
+
+    /* CCO layout con inyector lateral */
+    .cco-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 300px;
+      gap: 1rem;
+      align-items: start;
+      transition: grid-template-columns 0.3s var(--ease);
+    }
+    .cco-layout.sim-hidden { grid-template-columns: minmax(0, 1fr) 0px; }
+    .cco-layout.sim-hidden .simulator-panel { opacity: 0; transform: translateX(16px); pointer-events: none; visibility: hidden; }
+    .cco-main { min-width: 0; display: flex; flex-direction: column; gap: 1rem; }
+
+    /* KPI counters */
+    .counters-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .stat-card { background: var(--panel); padding: 0.85rem 1rem; }
+    .stat-card .label { display: flex; align-items: center; gap: 0.4rem; font-size: 0.72rem; color: var(--text-muted); font-weight: 500; }
+    .stat-card .label .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-faint); }
+    .stat-card.normal .dot { background: var(--ok); }
+    .stat-card.warning .dot { background: var(--warn); }
+    .stat-card.critical .dot { background: var(--crit); }
+    .stat-card.lost .dot { background: var(--lost); }
+    .stat-card .value { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.03em; margin-top: 0.15rem; font-variant-numeric: tabular-nums; }
+
+    /* Chart */
+    .chart-wrap { position: relative; height: 200px; padding: 0.5rem 0.5rem 0.25rem; }
+    #telemetry-chart { width: 100%; height: 100%; display: block; overflow: visible; }
+    .chart-legend { display: flex; gap: 0.9rem; flex-wrap: wrap; font-size: 0.7rem; color: var(--text-muted); }
+    .legend-item { display: inline-flex; align-items: center; gap: 0.35rem; }
+    .legend-swatch { width: 12px; height: 0; border-top: 1.5px dashed currentColor; }
+    .legend-swatch.solid { border-top-style: solid; border-top-width: 2px; }
+    .chart-tooltip {
+      position: absolute;
+      pointer-events: none;
+      background: rgba(20, 21, 22, 0.95);
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      padding: 0.4rem 0.55rem;
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+      opacity: 0;
+      transform: translate(-50%, -110%);
+      transition: opacity 0.12s;
+      white-space: nowrap;
+    }
+    .chart-tooltip strong { color: var(--text); font-weight: 600; }
+
+    /* Sensors */
+    .section-label { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; font-weight: 600; letter-spacing: -0.015em; color: var(--text); }
+    .section-label span.muted { font-weight: 400; color: var(--text-muted); font-size: 0.72rem; }
+    .sensors-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.75rem; }
+    .sensor-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      position: relative;
+      transition: border-color 0.2s var(--ease), background 0.2s var(--ease);
+    }
+    .sensor-card:hover { background: var(--panel-hover); }
+    .sensor-card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 14px;
+      bottom: 14px;
+      width: 2px;
+      border-radius: 0 2px 2px 0;
+      background: var(--text-faint);
+    }
+    .sensor-card.status-normal::before { background: var(--ok); }
+    .sensor-card.status-warning { border-color: rgba(242, 201, 76, 0.28); }
+    .sensor-card.status-warning::before { background: var(--warn); }
+    .sensor-card.status-critical { border-color: rgba(235, 87, 87, 0.4); animation: critGlow 2s var(--ease) infinite; }
+    .sensor-card.status-critical::before { background: var(--crit); }
+    .sensor-card.status-lost { opacity: 0.85; }
+    .sensor-card.status-lost::before { background: var(--lost); }
+    @keyframes critGlow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(235, 87, 87, 0); }
+      50% { box-shadow: 0 0 0 4px rgba(235, 87, 87, 0.12); }
+    }
+    .sensor-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; }
+    .sensor-name { font-size: 0.85rem; font-weight: 600; letter-spacing: -0.015em; }
+    .sensor-id { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.1rem; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 500;
+      white-space: nowrap;
+      border: 1px solid transparent;
+    }
+    .badge svg { flex-shrink: 0; }
+    .badge-normal { background: var(--ok-soft); color: var(--ok); border-color: rgba(76, 183, 130, 0.22); }
+    .badge-warning { background: var(--warn-soft); color: var(--warn); border-color: rgba(242, 201, 76, 0.22); }
+    .badge-critical { background: var(--crit-soft); color: var(--crit); border-color: rgba(235, 87, 87, 0.28); }
+    .badge-lost { background: var(--lost-soft); color: #a0a4ab; border-color: rgba(107, 111, 118, 0.3); }
+
+    .reading { display: flex; align-items: baseline; justify-content: space-between; margin: 0.9rem 0 0.6rem; }
+    .reading-label { font-size: 0.72rem; color: var(--text-muted); }
+    .reading-value { font-size: 1.55rem; font-weight: 500; color: var(--text); }
+
+    .threshold { margin-bottom: 0.75rem; }
+    .threshold-bar { position: relative; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.06); }
+    .tz { position: absolute; top: 0; bottom: 0; }
+    .tz.nominal { left: 36%; width: 8%; background: rgba(76, 183, 130, 0.55); }
+    .tz.warn { left: 44%; width: 8%; background: rgba(242, 201, 76, 0.4); }
+    .tz.crit { left: 52%; right: 0; background: rgba(235, 87, 87, 0.28); border-radius: 0 2px 2px 0; }
+    .threshold-marker {
+      position: absolute;
+      top: 50%;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--text);
+      border: 2px solid var(--panel);
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
+      transform: translate(-50%, -50%);
+      transition: left 0.4s var(--ease);
+    }
+    .threshold-ticks { position: relative; height: 14px; margin-top: 0.3rem; font-size: 0.62rem; color: var(--text-faint); }
+    .threshold-ticks span { position: absolute; transform: translateX(-50%); }
+    .threshold-ticks span:first-child { transform: none; }
+    .threshold-ticks span:last-child { transform: translateX(-100%); }
+
+    .metric-row { display: flex; justify-content: space-between; padding: 0.35rem 0; border-top: 1px solid var(--border); font-size: 0.75rem; color: var(--text-muted); }
+    .metric-val { color: var(--text-secondary); }
+
+    /* Event log */
+    .alerts-list { max-height: 220px; overflow-y: auto; }
+    .alert-item {
+      display: grid;
+      grid-template-columns: 76px 46px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem 1rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.75rem;
+    }
+    .alert-item:first-child { border-top: none; }
+    .alert-item:hover { background: rgba(255, 255, 255, 0.02); }
+    .log-time { color: var(--text-faint); font-size: 0.7rem; }
+    .log-level { font-size: 0.65rem; font-weight: 600; text-align: center; border-radius: 4px; padding: 0.05rem 0; }
+    .log-level.crit { color: var(--crit); background: var(--crit-soft); }
+    .log-level.warn { color: var(--warn); background: var(--warn-soft); }
+    .log-msg { color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .log-msg .num { color: var(--text); }
+    .empty-state { padding: 1.25rem 1rem; color: var(--text-muted); font-size: 0.78rem; text-align: center; }
+
+    /* Simulador QA (SCRUM-62) */
+    .simulator-panel {
+      position: sticky;
+      top: 0;
+      background: var(--panel);
+      border: 1px dashed rgba(255, 255, 255, 0.14);
+      border-radius: var(--radius);
+      transition: opacity 0.25s var(--ease), transform 0.3s var(--ease);
+      overflow: hidden;
+    }
+    .sim-tag { font-size: 0.62rem; font-weight: 500; color: var(--accent-2); background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.22); border-radius: 4px; padding: 0.05rem 0.35rem; }
+    .sim-close { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0.15rem; border-radius: 4px; display: grid; place-items: center; }
+    .sim-close:hover { background: var(--hover); color: var(--text); }
+    .sim-group-label { font-size: 0.7rem; font-weight: 500; color: var(--text-faint); margin: 0.9rem 0 0.45rem; }
+    .sim-group-label:first-child { margin-top: 0; }
+    .sim-buttons { display: flex; flex-direction: column; gap: 0.4rem; }
+    .btn-sim {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      padding: 0.5rem 0.65rem;
+      border-radius: 6px;
+      font-size: 0.77rem;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.12s var(--ease), border-color 0.12s var(--ease), color 0.12s;
+    }
+    .btn-sim:hover { background: var(--hover); border-color: var(--border-strong); color: var(--text); }
+    .btn-sim .sw { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--text-faint); }
+    .btn-sim.sim-green .sw { background: var(--ok); }
+    .btn-sim.sim-amber .sw { background: var(--warn); }
+    .btn-sim.sim-red .sw { background: var(--crit); }
+    .btn-sim.sim-gray .sw { background: var(--lost); }
+    .inline-row { display: flex; gap: 0.4rem; }
+    .inline-row input {
+      flex: 1;
+      min-width: 0;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-variant-numeric: tabular-nums;
+      font-size: 0.78rem;
+      padding: 0.45rem 0.6rem;
+      outline: none;
+    }
+    .inline-row input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(94, 106, 210, 0.2); }
+    .inline-row .btn-sim { width: auto; flex-shrink: 0; }
+    .sim-note { font-size: 0.7rem; color: var(--text-faint); margin-top: 0.9rem; line-height: 1.45; }
+
+    /* ============ CUADRILLA MÓVIL (HU-010) ============ */
+    .mobile-frame {
+      max-width: 390px;
+      margin: 0 auto;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 1.25rem;
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.45);
+    }
+    .mobile-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.1rem; }
+    .mobile-top h3 { font-size: 0.95rem; }
+    .mobile-top p { font-size: 0.72rem; color: var(--text-muted); }
+    .ot-card { border: 1px solid var(--border); border-radius: var(--radius); background: rgba(255, 255, 255, 0.02); padding: 0.9rem; margin-bottom: 1rem; }
+    .ot-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+    #mobile-ot-id { font-size: 1rem; font-weight: 600; color: var(--text); }
+    .ot-badge { font-size: 0.68rem; font-weight: 500; padding: 0.15rem 0.5rem; border-radius: 999px; background: var(--accent-soft); color: #b3baf5; border: 1px solid rgba(94, 106, 210, 0.3); }
+    .kv { display: flex; justify-content: space-between; gap: 1rem; padding: 0.4rem 0; border-top: 1px solid var(--border); font-size: 0.75rem; }
+    .kv span:first-child { color: var(--text-muted); }
+    .kv span:last-child { color: var(--text-secondary); text-align: right; }
+    .btn-action {
+      width: 100%;
+      padding: 0.7rem;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: background 0.15s var(--ease), opacity 0.15s;
+    }
+    .btn-action:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-success { background: var(--accent); color: #fff; }
+    .btn-success:hover:not(:disabled) { background: var(--accent-hover); }
+    .btn-warning { background: rgba(255, 255, 255, 0.04); border-color: var(--border-strong); color: var(--text); }
+    .btn-warning:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); }
+    #mobile-message { margin-top: 0.6rem; font-size: 0.72rem; text-align: center; color: var(--text-muted); min-height: 1em; }
+
+    /* ============ CIERRE AUDITADO (HU-011) ============ */
+    .audit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .audit-card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); }
+    .audit-display { text-align: center; padding: 1.75rem 1rem 1.5rem; margin: 1rem 0; border: 1px solid var(--border); border-radius: var(--radius); background: rgba(255, 255, 255, 0.015); }
+    .timer-val { font-size: 3rem; font-weight: 500; color: var(--text); line-height: 1.1; }
+    .samples-val { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.45rem; }
+    #audit-message { margin-top: 0.85rem; font-size: 0.8rem; font-weight: 500; color: var(--text-secondary); }
+    .audit-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .audit-actions .btn-sim { width: auto; flex: 1; min-width: 200px; }
+    #btn-force-close { margin-top: 0.25rem; margin-bottom: 0; }
+    .role-tag { font-size: 0.65rem; font-weight: 500; color: var(--warn); background: var(--warn-soft); border-radius: 4px; padding: 0.05rem 0.4rem; }
+    .audit-wide { grid-column: 1 / -1; }
+    .timer-label { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.2rem; }
+    .window-progress { height: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.06); margin: 0.85rem auto 0; max-width: 260px; overflow: hidden; }
+    .window-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width 0.6s var(--ease); }
+    .window-progress-fill.done { background: var(--ok); }
+    .window-progress-fill.failed { background: var(--crit); }
+    .close-hint { font-size: 0.7rem; color: var(--text-faint); text-align: center; margin-top: -0.1rem; }
+    .close-hint.ready { color: var(--ok); }
+    .locked-state { display: flex; gap: 0.75rem; align-items: flex-start; padding: 1.25rem 1rem; color: var(--text-muted); font-size: 0.78rem; }
+    .locked-state svg { color: var(--text-faint); flex-shrink: 0; margin-top: 0.1rem; }
+    .readings-table { font-size: 0.76rem; }
+    .readings-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1.2fr; gap: 0.75rem; align-items: center; padding: 0.45rem 1rem; border-top: 1px solid var(--border); }
+    .readings-headrow { border-top: none; font-size: 0.68rem; color: var(--text-faint); font-weight: 500; }
+    #audit-readings-body { max-height: 260px; overflow-y: auto; }
+    .readings-row .num { color: var(--text-secondary); }
+    .readings-row.out { background: rgba(235, 87, 87, 0.05); }
+    .readings-row.out .num { color: var(--crit); }
+
+    /* ============ RESPONSIVE ============ */
+    @media (max-width: 1180px) {
+      .cco-layout, .cco-layout.sim-hidden { grid-template-columns: minmax(0, 1fr); }
+      .cco-layout.sim-hidden .simulator-panel { display: none; }
+      .simulator-panel { position: static; }
+      .counters-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    @media (max-width: 900px) {
+      #app-shell { grid-template-columns: 1fr; }
+      .sidebar {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: var(--sidebar-w);
+        transform: translateX(-100%);
+        transition: transform 0.25s var(--ease);
+      }
+      .sidebar.open { transform: none; box-shadow: 24px 0 48px rgba(0, 0, 0, 0.5); }
+      .scrim.show { display: block; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 30; }
+      .menu-toggle { display: grid; }
+      .audit-grid { grid-template-columns: 1fr; }
+      .header-right .clock, .header-right .header-divider { display: none; }
+      .footer-right { display: none; }
+      main { padding: 1rem; }
+    }
+    @media (max-width: 560px) {
+      .counters-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .live-link span:last-child { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
   </style>
 </head>
 <body>
 
-  <header>
-    <div class="brand">
-      <span>⚡</span> Smart Predict CCO
-    </div>
-    <nav id="main-nav" style="display: none;">
-      <button id="nav-cco" data-testid="nav-cco" class="active" onclick="switchView('cco')">Consola CCO</button>
-      <button id="nav-mobile" data-testid="nav-mobile" onclick="switchView('mobile')">Cuadrilla Técnica</button>
-      <button id="nav-audit" data-testid="nav-audit" onclick="trySwitchToAudit()">Cierre Auditado</button>
-    </nav>
-    <div id="user-header-info" style="display: none;" class="user-pill">
-      <span id="user-display" data-testid="user-info"></span>
-      <button class="btn-logout" data-testid="btn-logout" onclick="logout()">Cerrar sesión</button>
-    </div>
-  </header>
+  <!-- Definiciones SVG compartidas (logo Smart Predict) -->
+  <svg class="sr-sprite" aria-hidden="true">
+    <defs>
+      <linearGradient id="sp-grad" x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#5e6ad2"/>
+        <stop offset="1" stop-color="#38bdf8"/>
+      </linearGradient>
+    </defs>
+    <symbol id="sp-logo" viewBox="0 0 32 32">
+      <circle cx="16" cy="16" r="12" fill="none" stroke="url(#sp-grad)" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="58 17.4" transform="rotate(-62 16 16)"/>
+      <path d="M8.6 16.6c1.9-4.4 3.9-4.4 5.6 0s3.7 4.4 5.6 0 3-3.6 3.9-2.2" fill="none" stroke="url(#sp-grad)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="25.1" cy="9.6" r="1.7" fill="#38bdf8"/>
+    </symbol>
+  </svg>
 
-  <main>
-    <!-- RBAC Error Banner -->
-    <div id="rbac-error-banner" data-testid="rbac-error" class="banner-error" style="display: none;">
-      No tiene permisos para esta acción
-    </div>
+  <!-- ===================== 1. LOGIN (HU-012 / SCRUM-58) ===================== -->
+  <div id="view-login">
+    <canvas id="loops-canvas" aria-hidden="true"></canvas>
+    <div class="login-vignette"></div>
 
-    <!-- 1. VISTA INICIO DE SESIÓN (HU-012 / SCRUM-58) -->
-    <div id="view-login" class="login-container">
-      <h2>Iniciar Sesión</h2>
+    <div class="login-card">
+      <div class="login-head">
+        <div class="logo">
+          <svg width="30" height="30"><use href="#sp-logo"/></svg>
+          <span class="logo-word">Smart Predict</span>
+        </div>
+        <h2>Iniciar Sesión</h2>
+        <p>Plataforma de operación y telemetría IoT</p>
+      </div>
+
       <div id="login-error" data-testid="login-error" class="banner-error" style="display: none;"></div>
-      
-      <div class="form-group">
+
+      <div class="field">
         <label for="username">Usuario</label>
-        <input type="text" id="username" data-testid="input-username" placeholder="operador, supervisor o tecnico">
+        <input type="text" id="username" data-testid="input-username" placeholder="operador, supervisor o tecnico" autocomplete="username">
       </div>
-      
-      <div class="form-group">
+
+      <div class="field">
         <label for="password">Contraseña</label>
-        <input type="password" id="password" data-testid="input-password" placeholder="Contraseña">
+        <input type="password" id="password" data-testid="input-password" placeholder="Contraseña" autocomplete="current-password">
       </div>
 
-      <button id="btn-login" data-testid="btn-login" class="btn-primary" onclick="login()">Ingresar al Sistema</button>
+      <button id="btn-login" data-testid="btn-login" class="btn btn-primary" onclick="login()">Ingresar al Sistema</button>
 
-      <div class="quick-roles">
-        <button type="button" onclick="quickFill('operador', 'operador123')">Operador</button>
-        <button type="button" onclick="quickFill('supervisor', 'supervisor123')">Supervisor</button>
-        <button type="button" onclick="quickFill('tecnico', 'tecnico123')">Técnico</button>
-      </div>
-    </div>
-
-    <!-- 2. VISTA CONSOLA CCO (HU-009 / SCRUM-46) -->
-    <div id="view-cco" data-testid="view-cco" style="display: none;">
-      <!-- Contadores de Estado -->
-      <div class="counters-grid">
-        <div class="counter-card">
-          <div class="label">Total Sensores</div>
-          <div id="cnt-total" class="value" data-testid="counter-total">3</div>
+      <div class="quick-access">
+        <div class="quick-access-label">Acceso rápido demo</div>
+        <div class="quick-roles">
+          <button type="button" onclick="quickFill('operador', 'operador123')">Operador</button>
+          <button type="button" onclick="quickFill('supervisor', 'supervisor123')">Supervisor</button>
+          <button type="button" onclick="quickFill('tecnico', 'tecnico123')">Técnico</button>
         </div>
-        <div class="counter-card normal">
-          <div class="label">Normal</div>
-          <div id="cnt-normal" class="value" data-testid="counter-normal">3</div>
-        </div>
-        <div class="counter-card warning">
-          <div class="label">Advertencia</div>
-          <div id="cnt-warning" class="value" data-testid="counter-warning">0</div>
-        </div>
-        <div class="counter-card critical">
-          <div class="label">Crítico</div>
-          <div id="cnt-critical" class="value" data-testid="counter-critical">0</div>
-        </div>
-        <div class="counter-card lost">
-          <div class="label">Sin Señal</div>
-          <div id="cnt-lost" class="value" data-testid="counter-lost-signal">0</div>
-        </div>
-      </div>
-
-      <!-- Panel Simulador Integrado (SCRUM-62) -->
-      <div class="simulator-panel">
-        <h3>Simulador de Ingesta y Pruebas Operativas (SCRUM-62)</h3>
-        <p style="color: var(--text-muted); font-size: 0.875rem; margin-top: 0.25rem;">
-          Inyecte telemetría directa al sensor principal (sensor-101) para evaluar las reglas de negocio RN001 a RN004.
-        </p>
-        <div class="sim-buttons">
-          <button class="btn-sim sim-green" data-testid="btn-sim-normal" onclick="sendTelemetry(40.0)">
-            40 PSI normal
-          </button>
-          <button class="btn-sim sim-amber" data-testid="btn-sim-warning" onclick="sendTelemetry(47.0)">
-            47 PSI advertencia
-          </button>
-          <button class="btn-sim sim-red" data-testid="btn-sim-critical" onclick="sendCriticalStreak()">
-            60 PSI x3 crítico
-          </button>
-          <button class="btn-sim sim-gray" data-testid="btn-sim-watchdog" onclick="triggerWatchdog()">
-            Disparo de watchdog SIN_SEÑAL
-          </button>
-        </div>
-
-        <div style="display: flex; gap: 0.5rem; margin-top: 1rem; align-items: center;">
-          <input type="number" id="manual-pressure" data-testid="input-manual-pressure" step="0.1" placeholder="Ej: 41.2" style="max-width: 160px; padding: 0.5rem; background: #0f172a; border: 1px solid var(--border); color: white; border-radius: 4px;">
-          <button class="btn-sim" data-testid="btn-send-manual-telemetry" onclick="sendManualTelemetry()">
-            Inyectar Lectura Manual
-          </button>
-        </div>
-      </div>
-
-      <!-- Tarjetas de Sensores -->
-      <div class="section-title">
-        <span>Monitoreo de Válvulas y Estaciones en Tiempo Real</span>
-      </div>
-      <div id="sensors-container" class="sensors-grid"></div>
-
-      <!-- Registro de Alertas Recientes -->
-      <div class="section-title" style="margin-top: 1.5rem;">
-        <span>Registro de Alertas Activas (Últimos Eventos)</span>
-      </div>
-      <div id="alerts-container" class="alerts-list" data-testid="alerts-list">
-        <div style="color: var(--text-muted); padding: 0.5rem;">Sin alertas registradas aún.</div>
       </div>
     </div>
+  </div>
 
-    <!-- 3. VISTA APP MÓVIL CUADRILLA TÉCNICA (HU-010 / SCRUM-50) -->
-    <div id="view-mobile" data-testid="view-mobile" style="display: none;">
-      <div class="mobile-frame">
-        <div class="mobile-notch"></div>
-        <h3 style="text-align: center; margin-bottom: 1rem;">Cuadrilla Técnica Alpha</h3>
-        <p style="text-align: center; color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">
-          Despacho Automático & Intervención en Campo
-        </p>
-
-        <div class="ot-card">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-            <span style="font-weight: 700; color: var(--primary);" id="mobile-ot-id" data-testid="mobile-ot-id">OT-101</span>
-            <span id="mobile-ot-status-badge" class="ot-badge" data-testid="mobile-ot-status" style="background: #334155; color: white;">ASIGNADA</span>
-          </div>
-          <div style="font-size: 0.875rem; margin-bottom: 0.35rem;">
-            <strong>Sensor:</strong> <span id="mobile-sensor-name">Válvula Principal Norte (sensor-101)</span>
-          </div>
-          <div style="font-size: 0.875rem; margin-bottom: 0.35rem;">
-            <strong>Cuadrante:</strong> Sector Q1 (Distancia: 2.8 km)
-          </div>
-          <div style="font-size: 0.875rem; color: var(--text-muted);">
-            <strong>Motivo:</strong> Evento CRITICAL_ALERT_L1 sostenido.
-          </div>
+  <!-- ===================== APP SHELL ===================== -->
+  <div id="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-top">
+        <div class="logo">
+          <svg width="22" height="22"><use href="#sp-logo"/></svg>
+          <span class="logo-word">Smart Predict</span>
         </div>
+        <span class="env-badge">v2.4</span>
+      </div>
 
-        <button id="btn-confirm-arrival" data-testid="btn-confirm-arrival" class="btn-action btn-success" onclick="confirmArrival()">
-          Confirmar llegada (EN_INTERVENCION)
+      <div class="nav-section-label">Operaciones</div>
+      <nav id="main-nav" style="display: none;">
+        <button id="nav-cco" data-testid="nav-cco" class="nav-item active" onclick="switchView('cco')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+          Consola CCO
         </button>
-
-        <button id="btn-request-closure" data-testid="btn-request-closure" class="btn-action btn-warning" disabled onclick="requestClosure()">
-          Solicitar cierre técnico (EN_AUDITORIA)
+        <button id="nav-mobile" data-testid="nav-mobile" class="nav-item" onclick="switchView('mobile')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg>
+          Cuadrilla Técnica
         </button>
+        <button id="nav-audit" data-testid="nav-audit" class="nav-item" onclick="trySwitchToAudit()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>
+          Cierre Auditado
+        </button>
+      </nav>
 
-        <div id="mobile-message" style="margin-top: 1rem; font-size: 0.875rem; text-align: center; color: var(--text-muted);"></div>
+      <button id="nav-sim" data-testid="nav-sim-toggle" class="nav-item nav-sim on" onclick="toggleSimulator()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6"/><path d="M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3"/><path d="M7 15h10"/></svg>
+        Simulador QA
+        <span class="kbd">S</span>
+      </button>
+
+      <div class="sidebar-spacer"></div>
+
+      <div id="user-header-info" style="display: none;">
+        <div class="avatar" id="user-avatar">SP</div>
+        <div class="profile-meta">
+          <span id="user-display" data-testid="user-info"></span>
+          <button class="btn-logout" data-testid="btn-logout" onclick="logout()">Cerrar sesión</button>
+        </div>
       </div>
-    </div>
+    </aside>
+    <div class="scrim" id="scrim" onclick="closeSidebar()"></div>
 
-    <!-- 4. VISTA PANTALLA DE CIERRE AUDITADO SUPERVISOR (HU-011 / SCRUM-54) -->
-    <div id="view-audit" data-testid="view-audit" style="display: none;">
-      <div class="section-title">
-        <span>Cierre Auditado y Estabilización (HU-011 / RN004)</span>
-        <span id="audit-ot-badge" class="badge badge-normal" data-testid="audit-ot-status">EN_AUDITORIA</span>
-      </div>
+    <div class="workspace">
+      <header class="app-header">
+        <div class="header-left">
+          <button class="menu-toggle" onclick="openSidebar()" aria-label="Abrir menú">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+          </button>
+          <div class="breadcrumbs">
+            <span>Smart Predict</span><span class="sep">/</span>
+            <span>Operaciones</span><span class="sep">/</span>
+            <span class="current" id="crumb-current">Consola CCO</span>
+          </div>
+        </div>
+        <div class="header-right">
+          <span class="live-link"><span class="live-dot"></span><span>Enlace telemétrico activo</span></span>
+          <span class="header-divider"></span>
+          <span class="clock" id="clock">--:--:--</span>
+        </div>
+      </header>
 
-      <div class="audit-grid">
-        <!-- Panel de Estabilización de 15 Minutos -->
-        <div class="audit-card">
-          <h3>Ventana de Estabilización (15 Minutos)</h3>
-          <p style="color: var(--text-muted); font-size: 0.875rem; margin-top: 0.25rem;">
-            Requiere lecturas continuas entre 36 y 44 PSI (Nominal: 40 PSI). Cualquier pico aborta la auditoría.
-          </p>
+      <main id="main-scroll">
+        <div class="view-inner">
+          <!-- RBAC Error Banner -->
+          <div id="rbac-error-banner" data-testid="rbac-error" class="banner-error" style="display: none;">No tiene permisos para esta acción</div>
 
-          <div class="gauge-display">
-            <div id="audit-timer" class="timer-val" data-testid="audit-timer">15:00</div>
-            <div id="audit-samples-count" class="samples-val" data-testid="audit-samples-count">Muestras: 30 / 30 requeridas</div>
-            <div id="audit-message" data-testid="audit-message" style="margin-top: 1rem; font-weight: 600; font-size: 0.95rem;">
-              En espera de validación de estabilidad
+          <!-- ===================== 2. CONSOLA CCO (HU-009 / SCRUM-46) ===================== -->
+          <div id="view-cco" data-testid="view-cco" style="display: none;">
+            <div class="page-head">
+              <div>
+                <h1>Consola CCO</h1>
+                <p>Monitoreo de válvulas y estaciones de presión en tiempo real</p>
+              </div>
+            </div>
+
+            <div class="cco-layout" id="cco-layout">
+              <div class="cco-main">
+                <div class="counters-grid">
+                  <div class="stat-card">
+                    <div class="label"><span class="dot"></span>Total sensores</div>
+                    <div id="cnt-total" class="value" data-testid="counter-total">3</div>
+                  </div>
+                  <div class="stat-card normal">
+                    <div class="label"><span class="dot"></span>Normal</div>
+                    <div id="cnt-normal" class="value" data-testid="counter-normal">3</div>
+                  </div>
+                  <div class="stat-card warning">
+                    <div class="label"><span class="dot"></span>Advertencia</div>
+                    <div id="cnt-warning" class="value" data-testid="counter-warning">0</div>
+                  </div>
+                  <div class="stat-card critical">
+                    <div class="label"><span class="dot"></span>Crítico</div>
+                    <div id="cnt-critical" class="value" data-testid="counter-critical">0</div>
+                  </div>
+                  <div class="stat-card lost">
+                    <div class="label"><span class="dot"></span>Sin señal</div>
+                    <div id="cnt-lost" class="value" data-testid="counter-lost-signal">0</div>
+                  </div>
+                </div>
+
+                <div class="panel">
+                  <div class="panel-head">
+                    <div>
+                      <div class="panel-title">Presión — <span class="num" style="font-weight:500;">sensor-101</span></div>
+                      <div class="panel-sub">Últimas lecturas recibidas</div>
+                    </div>
+                    <div class="chart-legend">
+                      <span class="legend-item" style="color:#8f99f0;"><span class="legend-swatch solid"></span><span style="color:var(--text-muted)">Lectura</span></span>
+                      <span class="legend-item" style="color:var(--ok);"><span class="legend-swatch"></span><span style="color:var(--text-muted)">Nominal 40</span></span>
+                      <span class="legend-item" style="color:var(--warn);"><span class="legend-swatch"></span><span style="color:var(--text-muted)">Límite 44</span></span>
+                      <span class="legend-item" style="color:var(--crit);"><span class="legend-swatch"></span><span style="color:var(--text-muted)">Crítico 52</span></span>
+                    </div>
+                  </div>
+                  <div class="chart-wrap" id="chart-wrap">
+                    <svg id="telemetry-chart"></svg>
+                    <div class="chart-tooltip" id="chart-tooltip"></div>
+                  </div>
+                </div>
+
+                <div class="section-label">
+                  <span>Sensores</span>
+                  <span class="muted">Actualización cada 3 s</span>
+                </div>
+                <div id="sensors-container" class="sensors-grid"></div>
+
+                <div class="panel">
+                  <div class="panel-head">
+                    <div class="panel-title">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h7"/></svg>
+                      Registro de eventos
+                    </div>
+                    <span class="panel-sub">Alertas activas y despachos</span>
+                  </div>
+                  <div id="alerts-container" class="alerts-list" data-testid="alerts-list">
+                    <div class="empty-state">Sin alertas registradas aún.</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Simulador QA (SCRUM-62) -->
+              <aside class="simulator-panel" id="simulator-panel">
+                <div class="panel-head">
+                  <div>
+                    <div class="panel-title">Simulador QA <span class="sim-tag">SCRUM-62</span></div>
+                    <div class="panel-sub">Inyector de telemetría de campo</div>
+                  </div>
+                  <button class="sim-close" onclick="toggleSimulator(false)" aria-label="Ocultar simulador">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                  </button>
+                </div>
+                <div class="panel-body">
+                  <div class="sim-group-label">Escenarios · <span class="num">sensor-101</span></div>
+                  <div class="sim-buttons">
+                    <button class="btn-sim sim-green" data-testid="btn-sim-normal" onclick="sendTelemetry(40.0)"><span class="sw"></span>40 PSI normal</button>
+                    <button class="btn-sim sim-amber" data-testid="btn-sim-warning" onclick="sendTelemetry(47.0)"><span class="sw"></span>47 PSI advertencia</button>
+                    <button class="btn-sim sim-red" data-testid="btn-sim-critical" onclick="sendCriticalStreak()"><span class="sw"></span>60 PSI x3 crítico</button>
+                    <button class="btn-sim sim-gray" data-testid="btn-sim-watchdog" onclick="triggerWatchdog()"><span class="sw"></span>Disparo de watchdog SIN_SEÑAL</button>
+                  </div>
+
+                  <div class="sim-group-label">Lectura manual</div>
+                  <div class="inline-row">
+                    <input type="number" id="manual-pressure" data-testid="input-manual-pressure" step="0.1" placeholder="41.2">
+                    <button class="btn-sim" data-testid="btn-send-manual-telemetry" onclick="sendManualTelemetry()">Inyectar Lectura Manual</button>
+                  </div>
+
+                  <p class="sim-note">Evalúa las reglas de negocio RN001 a RN004 sin hardware de campo. Solo para demostración y pruebas.</p>
+                </div>
+              </aside>
             </div>
           </div>
 
-          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-            <button class="btn-sim sim-green" data-testid="btn-sim-stabilization" onclick="simulateStabilization()">
-              Adelantar 15 minutos (Cierre Conforme)
-            </button>
-            <button class="btn-sim sim-red" data-testid="btn-sim-spike" onclick="simulateSpike()">
-              Inyectar pico 62 PSI (al min 13:45)
-            </button>
+          <!-- ===================== 3. CUADRILLA TÉCNICA (HU-010 / SCRUM-50) ===================== -->
+          <div id="view-mobile" data-testid="view-mobile" style="display: none;">
+            <div class="page-head">
+              <div>
+                <h1>Cuadrilla Técnica</h1>
+                <p>Despacho automático e intervención en campo</p>
+              </div>
+            </div>
+            <div class="mobile-frame">
+              <div class="mobile-top">
+                <div>
+                  <h3>Cuadrilla Alpha</h3>
+                  <p>Orden asignada</p>
+                </div>
+                <svg width="22" height="22"><use href="#sp-logo"/></svg>
+              </div>
+
+              <div class="ot-card">
+                <div class="ot-head">
+                  <span id="mobile-ot-id" class="num" data-testid="mobile-ot-id">OT-101</span>
+                  <span id="mobile-ot-status-badge" class="ot-badge" data-testid="mobile-ot-status">ASIGNADA</span>
+                </div>
+                <div class="kv"><span>Sensor</span><span id="mobile-sensor-name">Válvula Principal Norte (<span class="num">sensor-101</span>)</span></div>
+                <div class="kv"><span>Ubicación</span><span>Sector Q1 · 2.8 km</span></div>
+                <div class="kv"><span>Alerta</span><span>CRITICAL_ALERT_L1 sostenido</span></div>
+              </div>
+
+              <button id="btn-confirm-arrival" data-testid="btn-confirm-arrival" class="btn-action btn-success" onclick="confirmArrival()">Confirmar llegada (EN_INTERVENCION)</button>
+              <button id="btn-request-closure" data-testid="btn-request-closure" class="btn-action btn-warning" disabled onclick="requestClosure()">Solicitar cierre técnico (EN_AUDITORIA)</button>
+
+              <div id="mobile-message"></div>
+            </div>
+          </div>
+
+          <!-- ===================== 4. CIERRE AUDITADO (HU-011 / SCRUM-54) ===================== -->
+          <div id="view-audit" data-testid="view-audit" style="display: none;">
+            <div class="page-head">
+              <div>
+                <h1>Cierre Auditado</h1>
+                <p>Estabilización telemétrica de 15 minutos · RN004</p>
+              </div>
+              <span id="audit-ot-badge" class="badge badge-normal" data-testid="audit-ot-status">EN_AUDITORIA</span>
+            </div>
+
+            <div class="audit-grid">
+              <div class="audit-card">
+                <div class="panel-head">
+                  <div>
+                    <div class="panel-title">Ventana de estabilización</div>
+                    <div class="panel-sub">Banda nominal 36 – 44 PSI · Nominal 40 PSI</div>
+                  </div>
+                  <span class="num" style="font-size:0.72rem;color:var(--text-muted);">OT-101</span>
+                </div>
+                <div class="panel-body">
+                  <p style="color: var(--text-muted); font-size: 0.78rem;">Requiere lecturas continuas entre 36 y 44 PSI. Cualquier pico aborta la auditoría y la orden vuelve a intervención.</p>
+
+                  <div class="audit-display">
+                    <div class="timer-label">Tiempo restante</div>
+                    <div id="audit-timer" class="timer-val num" data-testid="audit-timer">15:00</div>
+                    <div class="window-progress"><div id="audit-progress-fill" class="window-progress-fill"></div></div>
+                    <div id="audit-samples-count" class="samples-val" data-testid="audit-samples-count">Muestras: 0 / 30 en rango</div>
+                    <div id="audit-message" data-testid="audit-message">En espera de validación de estabilidad</div>
+                  </div>
+
+                  <button id="btn-close-order" data-testid="btn-close-order" class="btn-action btn-success" disabled onclick="closeOrder()">Cerrar orden</button>
+                  <div id="close-order-hint" class="close-hint">Se habilita al completar 15 minutos estables con 30 / 30 muestras en banda.</div>
+
+                  <div class="sim-group-label" style="margin-top: 1rem;">Simulador QA · demo en vivo</div>
+                  <div class="audit-actions">
+                    <button class="btn-sim sim-green" data-testid="btn-sim-stabilization" onclick="simulateStabilization()"><span class="sw"></span>Adelantar 15 minutos (ventana estable)</button>
+                    <button class="btn-sim sim-red" data-testid="btn-sim-spike" onclick="simulateSpike()"><span class="sw"></span>Inyectar pico 62 PSI (al min 13:45)</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Cierre forzado: solo se monta en el DOM para SUPERVISOR_CCO -->
+              <div class="audit-card" id="forced-closure-slot"></div>
+
+              <!-- Últimas lecturas de la ventana -->
+              <div class="audit-card audit-wide">
+                <div class="panel-head">
+                  <div>
+                    <div class="panel-title">Últimas lecturas</div>
+                    <div class="panel-sub">Telemetría recibida durante la auditoría · <span class="num">sensor-101</span></div>
+                  </div>
+                  <span class="panel-sub" id="audit-readings-count">0 lecturas</span>
+                </div>
+                <div class="readings-table" data-testid="audit-readings">
+                  <div class="readings-row readings-headrow">
+                    <span>Hora</span><span>Minuto</span><span>Presión</span><span>Estado</span>
+                  </div>
+                  <div id="audit-readings-body">
+                    <div class="empty-state">Sin lecturas: la auditoría aún no ha iniciado.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
+      </main>
 
-        <!-- Panel de Cierre Forzado -->
-        <div class="audit-card">
-          <h3>Cierre Forzado con Control RBAC (SCRUM-19)</h3>
-          <p style="color: var(--text-muted); font-size: 0.875rem; margin-top: 0.25rem;">
-            Exclusivo para el rol <strong>SUPERVISOR_CCO</strong>. Requiere justificación técnica obligatoria.
-          </p>
+      <template id="tpl-forced-closure">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Cierre forzado</div>
+            <div class="panel-sub">Control de acceso RBAC · SCRUM-19</div>
+          </div>
+          <span class="role-tag">SUPERVISOR_CCO</span>
+        </div>
+        <div class="panel-body">
+          <p style="color: var(--text-muted); font-size: 0.78rem;">Exclusivo para el rol <strong style="color:var(--text-secondary);font-weight:500;">SUPERVISOR_CCO</strong>. Requiere justificación técnica obligatoria.</p>
 
-          <div id="forced-closure-error" data-testid="forced-closure-error" class="banner-error" style="display: none; margin-top: 1rem;"></div>
+          <div id="forced-closure-error" data-testid="forced-closure-error" class="banner-error" style="display: none; margin-top: 0.85rem;"></div>
 
-          <div class="form-group" style="margin-top: 1.25rem;">
-            <label for="justification">Justificación Técnica Obligatoria:</label>
-            <textarea id="justification" data-testid="forced-closure-justification" rows="4" placeholder="Ingrese el detalle técnico que justifica el cierre forzado de la orden..."></textarea>
+          <div class="field" style="margin-top: 0.9rem;">
+            <label for="justification">Justificación técnica obligatoria</label>
+            <textarea id="justification" data-testid="forced-closure-justification" rows="4" placeholder="Describe el motivo técnico del cierre forzado…"></textarea>
           </div>
 
-          <button id="btn-force-close" data-testid="btn-force-close" class="btn-action btn-warning" onclick="forceClose()">
-            Aplicar Cierre Forzado (CERRADA_FORZADA)
-          </button>
+          <button id="btn-force-close" data-testid="btn-force-close" class="btn-action btn-warning" onclick="forceClose()">Aplicar Cierre Forzado (CERRADA_FORZADA)</button>
         </div>
-      </div>
+      </template>
+
+      <template id="tpl-forced-closure-locked">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Cierre forzado</div>
+            <div class="panel-sub">Control de acceso RBAC · SCRUM-19</div>
+          </div>
+        </div>
+        <div class="locked-state" data-testid="forced-closure-locked">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+          <div>
+            <div style="color: var(--text-secondary); font-weight: 500;">Disponible solo para SUPERVISOR_CCO</div>
+            <div>Tu rol puede seguir la ventana y cerrar la orden cuando sea conforme.</div>
+          </div>
+        </div>
+      </template>
+
+      <footer class="app-footer">
+        <span><span class="ok-dot"></span>Nominal: 40.0 PSI (±10%) • Watchdog: 10m • Rama: develop</span>
+        <span class="footer-right">Smart Predict IoT Platform</span>
+      </footer>
     </div>
-  </main>
+  </div>
 
   <script>
     // Estado local de la aplicación
     let currentUser = null;
     let currentView = 'login';
     let currentOt = { id: 'OT-101', status: 'ASIGNADA', readings: [] };
+    let simulatorOpen = true;
+
+    const VIEW_LABELS = { cco: 'Consola CCO', mobile: 'Cuadrilla Técnica', audit: 'Cierre Auditado' };
+
+    const chartHistory = [
+      { pressure: 40.0, time: '—' },
+      { pressure: 40.2, time: '—' },
+      { pressure: 39.8, time: '—' },
+      { pressure: 40.1, time: '—' },
+      { pressure: 40.0, time: '—' }
+    ];
+
+    // ===================== Login: animación "Loops" =====================
+    const loops = (() => {
+      const canvas = document.getElementById('loops-canvas');
+      const ctx = canvas.getContext('2d');
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      let w = 0, h = 0, dpr = 1, raf = null, t0 = performance.now();
+
+      function resize() {
+        dpr = Math.min(window.devicePixelRatio || 1, 2);
+        w = canvas.clientWidth;
+        h = canvas.clientHeight;
+        canvas.width = Math.round(w * dpr);
+        canvas.height = Math.round(h * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      function frame(now) {
+        const t = (now - t0) / 1000;
+        ctx.clearRect(0, 0, w, h);
+        const cx = w / 2;
+        const cy = h / 2;
+        const maxR = Math.hypot(w, h) / 2;
+        const rings = 14;
+        const steps = 180;
+
+        for (let i = 0; i < rings; i++) {
+          const base = 70 + i * (maxR / rings) * 0.95;
+          const amp = 3 + i * 0.9;
+          const k = 3 + (i % 4);
+          const speed = 0.35 + i * 0.04;
+          const alpha = Math.max(0.03, 0.22 - i * 0.013);
+
+          ctx.beginPath();
+          for (let s = 0; s <= steps; s++) {
+            const a = (s / steps) * Math.PI * 2;
+            const r = base + amp * Math.sin(k * a + t * speed + i * 0.7) + amp * 0.4 * Math.sin(2 * a - t * 0.5);
+            const x = cx + r * Math.cos(a);
+            const y = cy + r * Math.sin(a) * 0.82;
+            s === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+          }
+          ctx.closePath();
+          ctx.strokeStyle = `rgba(120, 132, 230, ${alpha})`;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+
+          // Pulso de telemetría que recorre el anillo
+          const head = (t * (0.25 + (i % 3) * 0.08) + i * 0.9) % (Math.PI * 2);
+          const len = 0.55;
+          ctx.beginPath();
+          for (let s = 0; s <= 40; s++) {
+            const a = head - len + (s / 40) * len;
+            const r = base + amp * Math.sin(k * a + t * speed + i * 0.7) + amp * 0.4 * Math.sin(2 * a - t * 0.5);
+            const x = cx + r * Math.cos(a);
+            const y = cy + r * Math.sin(a) * 0.82;
+            s === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+          }
+          const grad = ctx.createLinearGradient(cx - base, cy, cx + base, cy);
+          grad.addColorStop(0, `rgba(94, 106, 210, ${alpha * 2.4})`);
+          grad.addColorStop(1, `rgba(56, 189, 248, ${alpha * 2.4})`);
+          ctx.strokeStyle = grad;
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+
+        if (!reduceMotion) raf = requestAnimationFrame(frame);
+      }
+
+      return {
+        start() {
+          if (raf) return;
+          resize();
+          raf = requestAnimationFrame(frame);
+        },
+        stop() {
+          if (raf) cancelAnimationFrame(raf);
+          raf = null;
+        },
+        resize
+      };
+    })();
+
+    window.addEventListener('resize', () => {
+      if (currentView === 'login') loops.resize();
+      if (currentView === 'cco') renderTelemetryChart();
+    });
+
+    // Reloj del header
+    function tickClock() {
+      document.getElementById('clock').textContent = new Date().toLocaleTimeString('es-CO', { hour12: false });
+    }
+    tickClock();
+    setInterval(tickClock, 1000);
+
+    // Sidebar móvil
+    function openSidebar() {
+      document.getElementById('sidebar').classList.add('open');
+      document.getElementById('scrim').classList.add('show');
+    }
+    function closeSidebar() {
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('scrim').classList.remove('show');
+    }
+
+    // Simulador QA (SCRUM-62)
+    function toggleSimulator(force) {
+      simulatorOpen = typeof force === 'boolean' ? force : !simulatorOpen;
+      document.getElementById('cco-layout').classList.toggle('sim-hidden', !simulatorOpen);
+      document.getElementById('nav-sim').classList.toggle('on', simulatorOpen);
+      if (simulatorOpen && currentView !== 'cco' && currentUser && currentUser.role !== 'TECNICO_CAMPO') {
+        switchView('cco');
+      }
+      if (simulatorOpen && window.innerWidth <= 1180) {
+        setTimeout(() => document.getElementById('simulator-panel').scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+      }
+      setTimeout(renderTelemetryChart, 320);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      const tag = (e.target.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key.toLowerCase() === 's' && currentUser) toggleSimulator();
+    });
 
     // Cargar credenciales preconfiguradas
     function quickFill(u, p) {
@@ -361,7 +1284,7 @@
 
       if (!uInput || uInput.trim() === '') {
         errBox.textContent = 'El usuario es obligatorio';
-        errBox.style.display = 'block';
+        errBox.style.display = 'flex';
         return;
       }
 
@@ -375,14 +1298,19 @@
 
         if (!res.ok) {
           errBox.textContent = data.error || 'Usuario o contraseña incorrectos';
-          errBox.style.display = 'block';
+          errBox.style.display = 'flex';
           return;
         }
 
         currentUser = data.user;
         document.getElementById('user-display').textContent = `${currentUser.name} (${currentUser.role})`;
+        document.getElementById('user-avatar').textContent = initials(currentUser.name);
         document.getElementById('user-header-info').style.display = 'flex';
         document.getElementById('main-nav').style.display = 'flex';
+        mountForcedClosurePanel();
+
+        // Ruta solicitada por dirección directa (p. ej. /#/cierre) antes del login
+        const requested = viewFromHash();
 
         // Redirección inicial según rol
         if (currentUser.role === 'TECNICO_CAMPO') {
@@ -390,10 +1318,15 @@
         } else {
           switchView('cco');
         }
+        if (requested && requested !== currentView) navigateTo(requested);
       } catch (err) {
         errBox.textContent = 'Error de conexión con el servidor';
-        errBox.style.display = 'block';
+        errBox.style.display = 'flex';
       }
+    }
+
+    function initials(name) {
+      return String(name || 'SP').split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0].toUpperCase()).join('') || 'SP';
     }
 
     function logout() {
@@ -402,48 +1335,200 @@
       document.getElementById('main-nav').style.display = 'none';
       document.getElementById('username').value = '';
       document.getElementById('password').value = '';
+      document.getElementById('forced-closure-slot').innerHTML = '';
       switchView('login');
+      history.replaceState(null, '', location.pathname);
     }
+
+    // Cierre forzado: el panel solo existe en el DOM para SUPERVISOR_CCO (SCRUM-54 CA4)
+    function mountForcedClosurePanel() {
+      const slot = document.getElementById('forced-closure-slot');
+      const isSupervisor = currentUser && currentUser.role === 'SUPERVISOR_CCO';
+      const tpl = document.getElementById(isSupervisor ? 'tpl-forced-closure' : 'tpl-forced-closure-locked');
+      slot.innerHTML = '';
+      slot.appendChild(tpl.content.cloneNode(true));
+    }
+
+    // Rutas por dirección directa (SCRUM-54 CA5)
+    const ROUTES = { cco: '#/consola', mobile: '#/cuadrilla', audit: '#/cierre' };
+    function viewFromHash() {
+      return Object.keys(ROUTES).find(v => ROUTES[v] === location.hash) || null;
+    }
+    function navigateTo(viewName) {
+      if (viewName === 'audit') trySwitchToAudit();
+      else switchView(viewName);
+    }
+    window.addEventListener('hashchange', () => {
+      const target = viewFromHash();
+      if (!currentUser) return;
+      if (!target) {
+        history.replaceState(null, '', ROUTES[currentView]);
+        return;
+      }
+      if (target !== currentView) navigateTo(target);
+    });
 
     // Control de Vistas y RBAC
     function switchView(viewName) {
       currentView = viewName;
       document.getElementById('rbac-error-banner').style.display = 'none';
 
-      ['login', 'cco', 'mobile', 'audit'].forEach(v => {
-        const el = document.getElementById(`view-${v}`);
-        if (el) el.style.display = v === viewName ? 'block' : 'none';
-      });
+      const isLogin = viewName === 'login';
+      document.getElementById('view-login').style.display = isLogin ? 'flex' : 'none';
+      document.getElementById('app-shell').style.display = isLogin ? 'none' : 'grid';
+      if (isLogin) loops.start(); else loops.stop();
 
       ['cco', 'mobile', 'audit'].forEach(v => {
+        const el = document.getElementById(`view-${v}`);
+        if (el) el.style.display = v === viewName ? 'block' : 'none';
         const btn = document.getElementById(`nav-${v}`);
-        if (btn) {
-          if (v === viewName) btn.classList.add('active');
-          else btn.classList.remove('active');
-        }
+        if (btn) btn.classList.toggle('active', v === viewName);
       });
 
-      if (viewName === 'cco') refreshCco();
+      if (VIEW_LABELS[viewName]) {
+        document.getElementById('crumb-current').textContent = VIEW_LABELS[viewName];
+      }
+      if (ROUTES[viewName] && location.hash !== ROUTES[viewName]) {
+        history.replaceState(null, '', ROUTES[viewName]);
+      }
+      closeSidebar();
+      document.getElementById('main-scroll').scrollTop = 0;
+
+      if (viewName === 'cco') {
+        refreshCco();
+        requestAnimationFrame(renderTelemetryChart);
+      }
       if (viewName === 'mobile') refreshMobile();
       if (viewName === 'audit') refreshAudit();
     }
 
     function trySwitchToAudit() {
       if (currentUser && currentUser.role === 'TECNICO_CAMPO') {
+        // Devolver a su pantalla de inicio con mensaje
+        if (currentView !== 'mobile') switchView('mobile');
+        history.replaceState(null, '', ROUTES.mobile);
         const banner = document.getElementById('rbac-error-banner');
         banner.textContent = 'No tiene permisos para esta acción';
-        banner.style.display = 'block';
+        banner.style.display = 'flex';
+        closeSidebar();
         return;
       }
       switchView('audit');
     }
 
-    // Refrescar Consola CCO
+    // ===================== Gráfico Time Series (SVG) =====================
+    function smoothPath(pts) {
+      if (pts.length < 2) return '';
+      let d = `M${pts[0].x},${pts[0].y}`;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const p0 = pts[i - 1] || pts[i];
+        const p1 = pts[i];
+        const p2 = pts[i + 1];
+        const p3 = pts[i + 2] || p2;
+        const c1x = p1.x + (p2.x - p0.x) / 6;
+        const c1y = p1.y + (p2.y - p0.y) / 6;
+        const c2x = p2.x - (p3.x - p1.x) / 6;
+        const c2y = p2.y - (p3.y - p1.y) / 6;
+        d += ` C${c1x},${c1y} ${c2x},${c2y} ${p2.x},${p2.y}`;
+      }
+      return d;
+    }
+
+    function renderTelemetryChart() {
+      const svg = document.getElementById('telemetry-chart');
+      const wrap = document.getElementById('chart-wrap');
+      if (!svg || !wrap) return;
+      const w = svg.clientWidth;
+      const h = svg.clientHeight;
+      if (!w || !h) return;
+
+      const padL = 28, padR = 8, padT = 10, padB = 10;
+      const minP = 20, maxP = 70;
+      const y = (v) => padT + (1 - (Math.min(maxP, Math.max(minP, v)) - minP) / (maxP - minP)) * (h - padT - padB);
+      const n = chartHistory.length;
+      const x = (i) => padL + (n === 1 ? 0 : (i / (n - 1)) * (w - padL - padR));
+
+      const pts = chartHistory.map((p, i) => ({ x: x(i), y: y(p.pressure) }));
+      const line = smoothPath(pts);
+      const area = line ? `${line} L${pts[n - 1].x},${h - padB} L${pts[0].x},${h - padB} Z` : '';
+
+      const grid = [20, 30, 40, 50, 60, 70].map(v => `
+        <line x1="${padL}" x2="${w - padR}" y1="${y(v)}" y2="${y(v)}" stroke="rgba(255,255,255,0.04)"/>
+        <text x="${padL - 6}" y="${y(v) + 3}" text-anchor="end" fill="#62666d" font-size="9" font-family="JetBrains Mono, monospace">${v}</text>`).join('');
+
+      const ref = (v, color) => `<line x1="${padL}" x2="${w - padR}" y1="${y(v)}" y2="${y(v)}" stroke="${color}" stroke-width="1" stroke-dasharray="3 4"/>`;
+
+      svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+      svg.innerHTML = `
+        <defs>
+          <linearGradient id="chart-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#5e6ad2" stop-opacity="0.28"/>
+            <stop offset="1" stop-color="#5e6ad2" stop-opacity="0"/>
+          </linearGradient>
+          <linearGradient id="chart-stroke" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#5e6ad2"/>
+            <stop offset="1" stop-color="#38bdf8"/>
+          </linearGradient>
+        </defs>
+        ${grid}
+        ${ref(40, 'rgba(76,183,130,0.55)')}
+        ${ref(44, 'rgba(242,201,76,0.5)')}
+        ${ref(52, 'rgba(235,87,87,0.55)')}
+        <path d="${area}" fill="url(#chart-fill)"/>
+        <path d="${line}" fill="none" stroke="url(#chart-stroke)" stroke-width="1.75" stroke-linecap="round"/>
+        <line id="chart-cursor" x1="0" x2="0" y1="${padT}" y2="${h - padB}" stroke="rgba(255,255,255,0.18)" opacity="0"/>
+        <circle id="chart-dot" r="3.5" fill="#f7f8f8" stroke="#5e6ad2" stroke-width="2" opacity="0"/>
+        <circle cx="${pts[n - 1].x}" cy="${pts[n - 1].y}" r="3" fill="#38bdf8"/>
+        <rect x="${padL}" y="0" width="${Math.max(0, w - padL - padR)}" height="${h}" fill="transparent" id="chart-hit"/>
+      `;
+
+      const tooltip = document.getElementById('chart-tooltip');
+      const hit = svg.querySelector('#chart-hit');
+      const cursor = svg.querySelector('#chart-cursor');
+      const dot = svg.querySelector('#chart-dot');
+
+      hit.addEventListener('mousemove', (e) => {
+        const rect = svg.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        let idx = Math.round(((mx - padL) / (w - padL - padR)) * (n - 1));
+        idx = Math.max(0, Math.min(n - 1, idx));
+        const p = pts[idx];
+        const d = chartHistory[idx];
+        cursor.setAttribute('x1', p.x);
+        cursor.setAttribute('x2', p.x);
+        cursor.setAttribute('opacity', 1);
+        dot.setAttribute('cx', p.x);
+        dot.setAttribute('cy', p.y);
+        dot.setAttribute('opacity', 1);
+        tooltip.innerHTML = `<strong class="num">${Number(d.pressure).toFixed(1)} PSI</strong> · ${d.time}`;
+        tooltip.style.left = `${p.x + 8}px`;
+        tooltip.style.top = `${p.y + 8}px`;
+        tooltip.style.opacity = 1;
+      });
+      hit.addEventListener('mouseleave', () => {
+        cursor.setAttribute('opacity', 0);
+        dot.setAttribute('opacity', 0);
+        tooltip.style.opacity = 0;
+      });
+    }
+
+    // ===================== Consola CCO =====================
+    const STATUS_META = {
+      NORMAL: { badge: 'badge-normal', text: 'Normal', card: 'status-normal',
+        icon: '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>' },
+      WARNING_L2: { badge: 'badge-warning', text: 'Advertencia', card: 'status-warning',
+        icon: '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9.5 17h-19L12 3z"/><path d="M12 10v4"/><path d="M12 17.5v.01"/></svg>' },
+      CRITICAL_ALERT_L1: { badge: 'badge-critical', text: 'Crítico', card: 'status-critical',
+        icon: '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>' },
+      'SIN_SEÑAL': { badge: 'badge-lost', text: 'Sin señal', card: 'status-lost',
+        icon: '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M2 8.5a15 15 0 0 1 20 0"/><path d="M5.5 12a10 10 0 0 1 13 0"/><path d="M3 3l18 18"/></svg>' }
+    };
+
     async function refreshCco() {
       try {
         const res = await fetch('/api/sensors');
         const data = await res.json();
-        
+
         // Contadores
         document.getElementById('cnt-total').textContent = data.summary.total;
         document.getElementById('cnt-normal').textContent = data.summary.normal;
@@ -451,78 +1536,78 @@
         document.getElementById('cnt-critical').textContent = data.summary.critical;
         document.getElementById('cnt-lost').textContent = data.summary.lostSignal;
 
-        // Render de Tarjetas de Sensores
+        // Tarjetas de sensores
         const container = document.getElementById('sensors-container');
         container.innerHTML = '';
 
         data.sensors.forEach(s => {
-          let badgeClass = 'badge-normal';
-          let statusText = 'Normal';
-          let statusIcon = '●';
-          let cardClass = 'status-normal';
+          const meta = STATUS_META[s.severity] || STATUS_META.NORMAL;
 
-          if (s.severity === 'WARNING_L2') {
-            badgeClass = 'badge-warning';
-            statusText = 'Advertencia';
-            statusIcon = '▲';
-            cardClass = 'status-warning';
-          } else if (s.severity === 'CRITICAL_ALERT_L1') {
-            badgeClass = 'badge-critical';
-            statusText = 'Crítico';
-            statusIcon = '✖';
-            cardClass = 'status-critical';
-          } else if (s.severity === 'SIN_SEÑAL') {
-            badgeClass = 'badge-lost';
-            statusText = 'Sin señal';
-            statusIcon = '◌';
-            cardClass = 'status-lost';
+          if (s.id === 'sensor-101') {
+            const last = chartHistory[chartHistory.length - 1];
+            if (!last || last.pressure !== s.pressure) {
+              chartHistory.push({ pressure: s.pressure, time: new Date().toLocaleTimeString('es-CO', { hour12: false }) });
+              if (chartHistory.length > 24) chartHistory.shift();
+            }
           }
 
-          const card = document.createElement('div');
-          card.className = `sensor-card ${cardClass}`;
-          card.setAttribute('data-testid', `sensor-card-${s.id}`);
+          const markerPct = Math.min(100, Math.max(0, Number(s.pressure)));
 
+          const card = document.createElement('div');
+          card.className = `sensor-card ${meta.card}`;
+          card.setAttribute('data-testid', `sensor-card-${s.id}`);
           card.innerHTML = `
             <div class="sensor-header">
               <div>
                 <div class="sensor-name">${s.name}</div>
-                <div class="sensor-id">${s.id} | Cuadrante ${s.quadrant}</div>
+                <div class="sensor-id"><span class="num">${s.id}</span> · Cuadrante ${s.quadrant}</div>
               </div>
-              <span class="badge ${badgeClass}" data-testid="sensor-status-${s.id}">
-                <i>${statusIcon}</i> ${statusText}
-              </span>
+              <span class="badge ${meta.badge}" data-testid="sensor-status-${s.id}">${meta.icon}<span>${meta.text}</span></span>
             </div>
-            <div class="metric-row">
-              <span style="color: var(--text-muted)">Presión:</span>
-              <span class="metric-val" data-testid="sensor-pressure-${s.id}">${Number(s.pressure).toFixed(1)} PSI</span>
+            <div class="reading">
+              <span class="reading-label">Presión</span>
+              <span class="reading-value num" data-testid="sensor-pressure-${s.id}">${Number(s.pressure).toFixed(1)} PSI</span>
             </div>
-            <div class="metric-row">
-              <span style="color: var(--text-muted)">Temperatura:</span>
-              <span class="metric-val">${s.temperature} °C</span>
+            <div class="threshold" title="Rango 0–100 PSI · Nominal 36–44 · Crítico > 52">
+              <div class="threshold-bar">
+                <div class="tz nominal"></div>
+                <div class="tz warn"></div>
+                <div class="tz crit"></div>
+                <div class="threshold-marker" style="left: ${markerPct}%;"></div>
+              </div>
+              <div class="threshold-ticks num">
+                <span style="left:0">0</span>
+                <span style="left:40%">36–44</span>
+                <span style="left:52%">52</span>
+                <span style="left:100%">100</span>
+              </div>
             </div>
-            <div class="metric-row">
-              <span style="color: var(--text-muted)">Vibración:</span>
-              <span class="metric-val">${s.vibration} mm/s</span>
-            </div>
+            <div class="metric-row"><span>Temperatura</span><span class="metric-val num">${s.temperature} °C</span></div>
+            <div class="metric-row"><span>Vibración</span><span class="metric-val num">${s.vibration} mm/s</span></div>
           `;
           container.appendChild(card);
         });
 
-        // Alertas
+        // Registro de eventos
         const alertsBox = document.getElementById('alerts-container');
         if (data.alerts && data.alerts.length > 0) {
-          alertsBox.innerHTML = data.alerts.map(a => `
-            <div class="alert-item">
-              <div>
-                <strong>${a.deviceId}</strong> - ${a.severity}
-                <div style="font-size: 0.75rem; color: var(--text-muted)">${new Date(a.timestamp).toLocaleTimeString()}</div>
-              </div>
-              <span style="font-weight: 700; color: ${a.severity.includes('CRITICAL') ? 'var(--danger)' : 'var(--warning)'}">
-                ${a.pressure} PSI
-              </span>
-            </div>
-          `).join('');
+          alertsBox.innerHTML = data.alerts.map(a => {
+            const isCrit = String(a.severity).includes('CRITICAL');
+            const ts = new Date(a.timestamp);
+            const timeStr = isNaN(ts) ? '—' : ts.toISOString().slice(11, 19);
+            return `
+              <div class="alert-item">
+                <span class="log-time num">${timeStr}</span>
+                <span class="log-level ${isCrit ? 'crit' : 'warn'}">${isCrit ? 'CRIT' : 'WARN'}</span>
+                <span class="log-msg"><span class="num">${a.deviceId}</span> · ${a.severity}${isCrit ? ' · Despacho Q1' : ''}</span>
+                <span class="num" style="color:${isCrit ? 'var(--crit)' : 'var(--warn)'};">${a.pressure} PSI</span>
+              </div>`;
+          }).join('');
+        } else {
+          alertsBox.innerHTML = '<div class="empty-state">Sin alertas registradas aún.</div>';
         }
+
+        renderTelemetryChart();
       } catch (e) {
         console.error('Error al actualizar CCO:', e);
       }
@@ -565,20 +1650,19 @@
       refreshCco();
     }
 
-    // Cuadrilla Técnica Móvil
+    // ===================== Cuadrilla Técnica =====================
     async function refreshMobile() {
       try {
         const res = await fetch('/api/work-orders/OT-101');
         if (res.ok) {
           const data = await res.json();
           currentOt = data.order;
-          
-          const statusBadge = document.getElementById('mobile-ot-status-badge');
-          statusBadge.textContent = currentOt.status;
-          
+
+          document.getElementById('mobile-ot-status-badge').textContent = currentOt.status;
+
           const btnConfirm = document.getElementById('btn-confirm-arrival');
           const btnRequest = document.getElementById('btn-request-closure');
-          
+
           if (currentOt.status === 'ASIGNADA') {
             btnConfirm.disabled = false;
             btnRequest.disabled = true; // Deshabilitado antes de confirmar llegada
@@ -611,34 +1695,136 @@
       }
     }
 
-    // Cierre Auditado Supervisor
+    // ===================== Cierre Auditado =====================
+    let auditState = null;      // última respuesta de progreso del servidor
+    let auditFetchedAt = 0;     // marca local para la cuenta regresiva en vivo
+
+    function fmtClock(totalSeconds) {
+      const s = Math.max(0, Math.round(totalSeconds));
+      return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+    }
+
+    function liveRemaining() {
+      if (!auditState) return 900;
+      if (auditState.status !== 'EN_AUDITORIA') return auditState.remainingSeconds;
+      const drift = (Date.now() - auditFetchedAt) / 1000;
+      return Math.max(0, auditState.remainingSeconds - drift);
+    }
+
+    function renderCountdown() {
+      if (!auditState) return;
+      const remaining = liveRemaining();
+      const status = auditState.status;
+      const timer = document.getElementById('audit-timer');
+      const fill = document.getElementById('audit-progress-fill');
+
+      if (status === 'CERRADA_CONFORME') {
+        timer.textContent = '00:00';
+        fill.style.width = '100%';
+        fill.className = 'window-progress-fill done';
+      } else if (status === 'EN_AUDITORIA') {
+        timer.textContent = fmtClock(remaining);
+        fill.style.width = `${((auditState.windowSeconds - remaining) / auditState.windowSeconds) * 100}%`;
+        fill.className = 'window-progress-fill' + (remaining <= 0 ? ' done' : '');
+      } else if (status === 'EN_INTERVENCION' && auditState.totalSamples > 0) {
+        timer.textContent = fmtClock(auditState.windowSeconds);
+        fill.style.width = '100%';
+        fill.className = 'window-progress-fill failed';
+      } else {
+        timer.textContent = fmtClock(auditState.windowSeconds);
+        fill.style.width = '0%';
+        fill.className = 'window-progress-fill';
+      }
+    }
+
+    function renderReadings(readings) {
+      const body = document.getElementById('audit-readings-body');
+      document.getElementById('audit-readings-count').textContent = `${readings.length} ${readings.length === 1 ? 'lectura' : 'lecturas'}`;
+      if (!readings.length) {
+        body.innerHTML = '<div class="empty-state">Sin lecturas: la auditoría aún no ha iniciado.</div>';
+        return;
+      }
+      body.innerHTML = readings.slice(-12).reverse().map(r => {
+        const ok = r.pressure >= 36 && r.pressure <= 44;
+        const ts = new Date(r.timestamp);
+        const hora = isNaN(ts) ? '—' : ts.toLocaleTimeString('es-CO', { hour12: false });
+        return `
+          <div class="readings-row${ok ? '' : ' out'}" data-testid="audit-reading-row">
+            <span class="num">${hora}</span>
+            <span class="num">${r.minute || '—'}</span>
+            <span class="num">${Number(r.pressure).toFixed(1)} PSI</span>
+            <span><span class="badge ${ok ? 'badge-normal' : 'badge-critical'}">${ok ? 'NORMAL' : 'FUERA DE RANGO'}</span></span>
+          </div>`;
+      }).join('');
+    }
+
     async function refreshAudit() {
       try {
         const res = await fetch('/api/work-orders/OT-101');
-        if (res.ok) {
-          const data = await res.json();
-          currentOt = data.order;
+        if (!res.ok) return;
+        const data = await res.json();
+        currentOt = data.order;
+        auditState = data.audit;
+        auditFetchedAt = Date.now();
 
-          const badge = document.getElementById('audit-ot-badge');
-          badge.textContent = currentOt.status;
-          
-          if (currentOt.status === 'CERRADA_CONFORME') {
-            badge.className = 'badge badge-normal';
-            document.getElementById('audit-message').textContent = 'Estabilización de 15 minutos completada con éxito';
-            document.getElementById('audit-samples-count').textContent = 'Muestras: 30 / 30 en rango';
-            document.getElementById('audit-timer').textContent = '15:00';
-          } else if (currentOt.status === 'EN_INTERVENCION') {
-            badge.className = 'badge badge-warning';
-            document.getElementById('audit-message').textContent = currentOt.auditMessage || 'Inestabilidad detectada';
-          } else if (currentOt.status === 'CERRADA_FORZADA') {
-            badge.className = 'badge badge-warning';
-            document.getElementById('audit-message').textContent = currentOt.auditMessage || 'Cierre forzado registrado';
-          }
+        const status = currentOt.status;
+        const badge = document.getElementById('audit-ot-badge');
+        badge.textContent = status;
+        badge.className = 'badge ' + (status === 'CERRADA_CONFORME' ? 'badge-normal'
+          : status === 'EN_AUDITORIA' ? 'badge-normal'
+          : status === 'EN_INTERVENCION' || status === 'CERRADA_FORZADA' ? 'badge-warning'
+          : 'badge-lost');
+
+        const msg = document.getElementById('audit-message');
+        const samples = document.getElementById('audit-samples-count');
+        samples.textContent = `Muestras: ${auditState.nominalSamples} / ${auditState.requiredSamples} en rango`;
+
+        if (status === 'CERRADA_CONFORME') {
+          msg.textContent = 'Estabilización de 15 minutos completada con éxito';
+        } else if (status === 'EN_INTERVENCION') {
+          msg.textContent = currentOt.auditMessage || 'Orden en intervención: la cuadrilla aún no solicita el cierre';
+        } else if (status === 'CERRADA_FORZADA') {
+          msg.textContent = currentOt.auditMessage || 'Cierre forzado registrado';
+        } else if (status === 'EN_AUDITORIA') {
+          msg.textContent = auditState.canClose
+            ? 'Ventana completada: 15 minutos estables. Ya puede cerrar la orden.'
+            : 'Ventana en curso: todas las lecturas deben permanecer entre 36 y 44 PSI';
+        } else {
+          msg.textContent = 'En espera de validación de estabilidad';
         }
+
+        const btnClose = document.getElementById('btn-close-order');
+        const hint = document.getElementById('close-order-hint');
+        btnClose.disabled = !auditState.canClose;
+        hint.classList.toggle('ready', auditState.canClose);
+        hint.textContent = auditState.canClose
+          ? 'Ventana estable completada. Puede cerrar la orden.'
+          : status === 'CERRADA_CONFORME' ? 'Orden cerrada conforme.'
+          : 'Se habilita al completar 15 minutos estables con 30 / 30 muestras en banda.';
+
+        renderReadings(currentOt.readings || []);
+        renderCountdown();
       } catch (e) {
         console.error(e);
       }
     }
+
+    async function closeOrder() {
+      const res = await fetch('/api/work-orders/OT-101/close', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userRole: currentUser ? currentUser.role : null })
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        document.getElementById('audit-message').textContent = data.error || 'No se pudo cerrar la orden';
+      }
+      refreshAudit();
+    }
+
+    // Cuenta regresiva en vivo y sincronización con el servidor
+    setInterval(() => { if (currentView === 'audit') renderCountdown(); }, 1000);
+    setInterval(() => { if (currentView === 'audit') refreshAudit(); }, 3000);
 
     async function simulateStabilization() {
       const res = await fetch('/api/work-orders/OT-101/simulate-stabilization', { method: 'POST' });
@@ -662,14 +1848,14 @@
       if (!currentUser || currentUser.role !== 'SUPERVISOR_CCO') {
         const banner = document.getElementById('rbac-error-banner');
         banner.textContent = 'No tiene permisos para esta acción';
-        banner.style.display = 'block';
+        banner.style.display = 'flex';
         return;
       }
 
       const just = document.getElementById('justification').value;
       if (!just || just.trim() === '') {
         errBox.textContent = 'La justificación técnica es obligatoria';
-        errBox.style.display = 'block';
+        errBox.style.display = 'flex';
         return;
       }
 
@@ -682,7 +1868,7 @@
       const data = await res.json();
       if (!res.ok) {
         errBox.textContent = data.error || 'Error al forzar cierre';
-        errBox.style.display = 'block';
+        errBox.style.display = 'flex';
       } else {
         refreshAudit();
       }
@@ -692,7 +1878,9 @@
     setInterval(() => {
       if (currentView === 'cco') refreshCco();
     }, 3000);
+
+    // Arranque en pantalla de login
+    loops.start();
   </script>
 </body>
 </html>
-

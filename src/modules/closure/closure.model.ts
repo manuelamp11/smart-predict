@@ -31,6 +31,18 @@ export interface WorkOrder {
   forcedClosureDetails?: ForcedClosureDetails | undefined;
 }
 
+export interface AuditProgress {
+  status: WorkOrderStatus;
+  windowSeconds: number;
+  elapsedSeconds: number;
+  remainingSeconds: number;
+  nominalSamples: number;
+  totalSamples: number;
+  requiredSamples: number;
+  windowComplete: boolean;
+  canClose: boolean;
+}
+
 export interface AuditResult {
   success: boolean;
   status: WorkOrderStatus;
