@@ -6,7 +6,8 @@ import { RoutingService, ConsoleCcoEscalator, ConsoleCrewNotifier } from './modu
 import { Crew, CRITICAL_ALERT_L1 as ROUTING_CRITICAL_ALERT } from './modules/routing/routing.model';
 import { ClosureValidationService } from './modules/closure/closure.service';
 import { UserRole } from './modules/closure/closure.model';
-import { AnomalyResult } from './modules/anomaly/anomaly.model';
+import { AnomalyResult } from './modules/anomaly/anomaly.model';import { createMqttClient } from './modules/mqtt/mqtt.client';
+import { TelemetrySubscriber } from './modules/mqtt/mqtt.subscriber';
 
 export const app = express();
 const PORT = process.env.PORT || 3000;
@@ -426,5 +427,14 @@ app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`[Smart Predict Server] Corriendo en http://localhost:${PORT}`);
+  });
+
+  // HU-006: al iniciar, el sistema se suscribe a sensores/+/telemetria
+  const telemetrySubscriber = new TelemetrySubscriber(createMqttClient(), telemetryService);
+  telemetrySubscriber.start();
+
+  process.on('SIGINT', () => {
+    telemetrySubscriber.stop();
+    process.exit(0);
   });
 }
